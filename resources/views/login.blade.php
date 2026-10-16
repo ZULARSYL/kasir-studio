@@ -10,8 +10,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
     <style>
     :root {
-        --brand-primary: #F47B20;
-        --brand-primary-dark: #D76510;
+        --brand-primary: #007B8B;
+        --brand-primary-dark: #002025;
         --brand-primary-light: #FFF4EB;
         --brand-dark: #0F172A;
         --brand-slate: #475569;
@@ -141,80 +141,15 @@
 </head>
 <body>
     
-<div class="login-page-wrapper py-5 d-flex align-items-center">
-    <div class="container py-lg-3">
-        
-        <!-- Breadcrumb Header -->
-        <div class="d-flex align-items-center justify-content-between mb-4">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0 small">
-                    <li class="breadcrumb-item"><a href="{{ url('/') }}" class="text-decoration-none text-muted"><i class="bi bi-house-door me-1"></i> Home</a></li>
-                    <li class="breadcrumb-item active text-brand fw-semibold" aria-current="page">Login Calon Mahasiswa</li>
-                </ol>
-            </nav>
-            <span class="badge bg-white text-dark border px-3 py-1 rounded-pill small shadow-sm d-none d-md-inline-block">
-                <i class="fas fa-shield-alt text-success me-1"></i> Portal PMB WIGA
-            </span>
-        </div>
-
+<div class="login-page-wrapper py-5 d-flex align-items-center min-vh-100">
+    <div class="container py-lg-3 d-flex justify-content-center align-items-center">
         <!-- Main Auth Card -->
-        <div class="auth-card">
-            <div class="row g-0">
-                
-                <!-- SISI KIRI: INFORMASI PORTAL PMB -->
-                <div class="col-lg-5 auth-sidebar p-4 p-md-5 d-flex flex-column justify-content-between">
-                    <div>
-                        <!-- Brand Badge -->
-                        <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-white bg-opacity-10 border border-white border-opacity-10 text-white small mb-4">
-                            <i class="bi bi-person-badge text-warning"></i> Portal Calon Mahasiswa
-                        </div>
-
-                        <h3 class="fw-bold text-white mb-3">Selamat Datang Kembali!</h3>
-                        <p class="text-white-50 small mb-4" style="line-height: 1.6;">
-                            Silakan masuk ke akun Anda untuk melanjutkan proses pendaftaran, cek pengumuman hasil seleksi, dan verifikasi berkas.
-                        </p>
-
-                        <!-- Fitur Portal Mahasiswa -->
-                        <div class="d-flex flex-column gap-2 mb-4">
-                            <div class="portal-feature">
-                                <i class="bi bi-file-earmark-check-fill text-warning fs-6"></i>
-                                <span>Pantau kelengkapan & verifikasi berkas</span>
-                            </div>
-                            <div class="portal-feature">
-                                <i class="bi bi-award-fill text-warning fs-6"></i>
-                                <span>Lihat pengumuman kelulusan & beasiswa</span>
-                            </div>
-                            <div class="portal-feature">
-                                <i class="bi bi-credit-card-2-front-fill text-warning fs-6"></i>
-                                <span>Konfirmasi pembayaran & registrasi ulang</span>
-                            </div>
-                            <div class="portal-feature">
-                                <i class="bi bi-printer-fill text-warning fs-6"></i>
-                                <span>Cetak kartu tanda peserta ujian online</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bantuan CS -->
-                    <div class="p-3 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-10 mt-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="p-2 rounded-circle bg-white bg-opacity-20 text-white">
-                                <i class="bi bi-headset fs-5"></i>
-                            </div>
-                            <div>
-                                <h6 class="text-white fw-bold mb-0 small">Lupa Password / Kendala?</h6>
-                                <span class="text-white-50" style="font-size: 0.75rem;">WhatsApp CS: <strong>+62 812-3456-7890</strong></span>
-                            </div>
-                        </div>
-                    </div>
+        <div class="auth-card w-100" style="max-width: 480px;">
+            <div class="p-4 p-md-5 bg-white d-flex flex-column justify-content-center">
+                <div class="mb-4">
+                    <h4 class="fw-bold text-dark mb-1">Masuk ke Akun Anda</h4>
+                    <p class="text-muted small mb-0">Gunakan username dan kata sandi yang telah Anda daftarkan sebelumnya.</p>
                 </div>
-
-                <!-- SISI KANAN: FORM LOGIN -->
-                <div class="col-lg-7 p-4 p-md-5 bg-white d-flex flex-column justify-content-center">
-                    <div class="mb-4">
-                        <h4 class="fw-bold text-dark mb-1">Masuk ke Akun Anda</h4>
-                        <p class="text-muted small mb-0">Gunakan username dan kata sandi yang telah Anda daftarkan sebelumnya.</p>
-                    </div>
 
                     <!-- Alert Notifikasi Error Validasi Laravel -->
                     @if (session('success'))
@@ -284,7 +219,7 @@
                     </form>
                 </div>
 
-            </div>
+
         </div>
     </div>
 </div>
