@@ -1,18 +1,16 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Kasir | Portal PMB WIGA</title>
-</head>
-<body>
-    <main>
-        <h1>Dashboard Kasir</h1>
-        <p>Selamat datang, {{ auth()->user()->name }}.</p>
-        <form action="{{ route('logout') }}" method="POST">
-            @csrf
-            <button type="submit">Keluar</button>
-        </form>
-    </main>
-</body>
-</html>
+@extends('template.index')
+
+@section('title', 'Menu Kasir POS | Pressent Studio & Cafe')
+
+@section('content')
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card p-4">
+                    <h5 class="card-title">Menu Kasir (POS)</h5>
+                    <p class="card-text">Selamat datang di menu kasir (POS) Pressent Studio & Cafe. Silakan gunakan fitur ini untuk mengelola transaksi penjualan dengan mudah dan efisien.</p>
+                    <a href="{{ route('kasir.kasir') }}" class="btn btn-primary">Buka Menu Kasir</a>
+                </div>
+            </div>
+        </div>
+    </div>

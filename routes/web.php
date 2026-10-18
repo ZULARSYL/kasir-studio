@@ -28,4 +28,5 @@ Route::middleware(['auth', 'role:kasir'])
     ->name('kasir.')
     ->group(function () {
         Route::view('/', 'kasir.index')->name('index');
+        Route::view('/kasir', 'kasir.kasir')->name('kasir');
     });
