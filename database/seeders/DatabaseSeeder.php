@@ -30,5 +30,7 @@ class DatabaseSeeder extends Seeder
                 'role' => 'kasir',
             ]
         );
+
+        $this->call(MasterDataSeeder::class);
     }
 }

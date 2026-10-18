@@ -950,10 +950,10 @@ background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary
                                         </a>
                                     </li>
                                     <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.menu-cafe-perjenis') ? route('admin.master.menu-cafe-perjenis') : url('/admin/master/menu-cafe-perjenis') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/menu-cafe-perjenis*') ? 'active' : '' }}">
+                                        <a href="{{ Route::has('admin.master.menu-cafe') ? route('admin.master.menu-cafe') : url('/admin/master/menu-cafe') }}" 
+                                           class="sidebar-submenu-link {{ request()->is('admin/master/menu-cafe*') ? 'active' : '' }}">
                                             <i class="bi bi-tag"></i>
-                                            <span>Menu Cafe Perjenis</span>
+                                            <span>Menu Cafe</span>
                                         </a>
                                     </li>
                                     <li class="sidebar-submenu-item">
