@@ -51,10 +51,10 @@ class KepegawaianTest extends TestCase
     {
         $kasir = $this->getKasir();
 
-        $responseJabatan = $this->actingAs($kasir)->get(route('admin.kepegawaian.jabatan'));
+        $responseJabatan = $this->actingAs($kasir)->get(route('admin.kepegawaian.jabatan.index'));
         $responseJabatan->assertForbidden();
 
-        $responsePegawai = $this->actingAs($kasir)->get(route('admin.kepegawaian.pegawai'));
+        $responsePegawai = $this->actingAs($kasir)->get(route('admin.kepegawaian.pegawai.index'));
         $responsePegawai->assertForbidden();
     }
 
@@ -79,9 +79,9 @@ class KepegawaianTest extends TestCase
         $admin = $this->getAdmin();
 
         // 1. Index page
-        $response = $this->actingAs($admin)->get(route('admin.kepegawaian.jabatan'));
+        $response = $this->actingAs($admin)->get(route('admin.kepegawaian.jabatan.index'));
         $response->assertOk();
-        $response->assertSee('Submenu Jabatan Pegawai');
+        $response->assertSee('Jabatan Pegawai');
         $response->assertSee('Tambah Jabatan Baru');
 
         // 2. Store Jabatan
@@ -124,9 +124,9 @@ class KepegawaianTest extends TestCase
         $jabatanBarista = Jabatan::create(['nama_jabatan' => 'Barista Cafe']);
 
         // 1. Index page
-        $response = $this->actingAs($admin)->get(route('admin.kepegawaian.pegawai'));
+        $response = $this->actingAs($admin)->get(route('admin.kepegawaian.pegawai.index'));
         $response->assertOk();
-        $response->assertSee('Submenu Pegawai');
+        $response->assertSee('Pegawai');
         $response->assertSee('Tambah Pegawai Baru');
         $response->assertSee('Kasir Utama');
 
@@ -181,12 +181,12 @@ class KepegawaianTest extends TestCase
         ]);
 
         // 5. Filter Pencarian Pegawai
-        $searchResponse = $this->actingAs($admin)->get(route('admin.kepegawaian.pegawai', ['search' => 'Senapelan']));
+        $searchResponse = $this->actingAs($admin)->get(route('admin.kepegawaian.pegawai.index', ['search' => 'Senapelan']));
         $searchResponse->assertOk();
         $searchResponse->assertSee('Rian Hidayat, S.Kom');
 
         // Filter by Jabatan
-        $filterJabatanResponse = $this->actingAs($admin)->get(route('admin.kepegawaian.pegawai', ['jabatan_id' => $jabatanBarista->id]));
+        $filterJabatanResponse = $this->actingAs($admin)->get(route('admin.kepegawaian.pegawai.index', ['jabatan_id' => $jabatanBarista->id]));
         $filterJabatanResponse->assertOk();
         $filterJabatanResponse->assertSee('Rian Hidayat, S.Kom');
 

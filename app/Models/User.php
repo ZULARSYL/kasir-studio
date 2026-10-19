@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -21,6 +21,9 @@ class User extends Authenticatable
         'role',
         'username',
         'password',
+        'toko_cabang_id',
+        'pegawai_id',
+        'jabatan_id',
     ];
 
     /**
@@ -41,26 +44,51 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            // 'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
 
+    /**
+     * Relasi ke master Toko Cabang (Penempatan Outlet).
+     */
+    public function tokoCabang(): BelongsTo
+    {
+        return $this->belongsTo(TokoCabang::class, 'toko_cabang_id');
+    }
+
+    /**
+     * Relasi ke data Pegawai.
+     */
+    public function pegawai(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'pegawai_id');
+    }
+
+    /**
+     * Relasi ke data Jabatan.
+     */
+    public function jabatan(): BelongsTo
+    {
+        return $this->belongsTo(Jabatan::class, 'jabatan_id');
+    }
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return strtolower($this->role) === 'admin';
     }
 
     public function isKasir(): bool
     {
-        return $this->role === 'kasir';
+        return strtolower($this->role) === 'kasir';
     }
-
 
     public function getRoleLabelAttribute(): string
     {
-        return match ($this->role) {
+        if ($this->jabatan) {
+            return $this->jabatan->nama_jabatan;
+        }
+
+        return match (strtolower($this->role ?? '')) {
             'admin' => 'Admin',
             'kasir' => 'Kasir',
             default => ucfirst(str_replace('_', ' ', $this->role ?? '-')),
@@ -69,7 +97,7 @@ class User extends Authenticatable
 
     public function getRoleBadgeClassAttribute(): string
     {
-        return match ($this->role) {
+        return match (strtolower($this->role ?? '')) {
             'admin' => 'bg-primary-subtle text-primary border-primary-subtle',
             'kasir' => 'bg-success-subtle text-success border-success-subtle',
             default => 'bg-secondary-subtle text-secondary border-secondary-subtle',
@@ -78,7 +106,7 @@ class User extends Authenticatable
 
     public function getRoleIconAttribute(): string
     {
-        return match ($this->role) {
+        return match (strtolower($this->role ?? '')) {
             'admin' => 'bi-person-gear text-primary',
             'kasir' => 'bi-cash text-success',
             default => 'bi-person text-secondary',

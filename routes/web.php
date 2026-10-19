@@ -115,6 +115,14 @@ Route::middleware(['auth', 'role:admin'])
             Route::resource('pegawai', \App\Http\Controllers\Kepegawaian\PegawaiController::class)->except(['index', 'create', 'show', 'edit']);
             Route::get('pegawai/list', [\App\Http\Controllers\Kepegawaian\PegawaiController::class, 'index'])->name('pegawai');
         });
+
+        // Pengaturan (User)
+        Route::prefix('pengaturan')->name('pengaturan.')->group(function () {
+            // Submenu User
+            Route::get('user', [\App\Http\Controllers\Pengaturan\UserController::class, 'index'])->name('user.index');
+            Route::resource('user', \App\Http\Controllers\Pengaturan\UserController::class)->except(['index', 'create', 'show', 'edit']);
+            Route::get('user/list', [\App\Http\Controllers\Pengaturan\UserController::class, 'index'])->name('user');
+        });
     });
 
 Route::middleware(['auth', 'role:kasir'])
