@@ -24,7 +24,7 @@ class MenuCafeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nama' => 'required|string|max:255|unique:menu_cafe_jenis,nama',
+            'nama' => 'required|string|max:255|unique:menu_cafe,nama',
         ]);
 
         MenuCafe::create($validated);
@@ -36,7 +36,7 @@ class MenuCafeController extends Controller
     public function update(Request $request, MenuCafe $menuCafe)
     {
         $validated = $request->validate([
-            'nama' => 'required|string|max:255|unique:menu_cafe_jenis,nama,' . $menuCafe->id,
+            'nama' => 'required|string|max:255|unique:menu_cafe,nama,' . $menuCafe->id,
         ]);
 
         $menuCafe->update($validated);

@@ -2,13 +2,15 @@
 
 namespace Database\Seeders;
 
+use App\Models\Barang;
 use App\Models\GenreFilm;
 use App\Models\HargaPerdurasi;
 use App\Models\Jabatan;
 use App\Models\JenisBiaya;
-use App\Models\MenuCafePerjenis;
+use App\Models\MenuCafe;
 use App\Models\Promo;
 use App\Models\Room;
+use App\Models\SatuanBarang;
 use App\Models\TipePembayaran;
 use App\Models\TokoCabang;
 use Illuminate\Database\Seeder;
@@ -121,8 +123,9 @@ class MasterDataSeeder extends Seeder
             ['nama' => 'Minuman'],
             ['nama' => 'Snack'],
         ];
+        $createdMenuCafes = [];
         foreach ($cafeKategori as $item) {
-            MenuCafePerjenis::firstOrCreate(['nama' => $item['nama']], $item);
+            $createdMenuCafes[$item['nama']] = MenuCafe::firstOrCreate(['nama' => $item['nama']], $item);
         }
 
         // 7. Genre (hanya nama genre)
@@ -162,6 +165,41 @@ class MasterDataSeeder extends Seeder
         ];
         foreach ($jabatans as $item) {
             Jabatan::firstOrCreate(['nama_jabatan' => $item['nama_jabatan']], $item);
+        }
+
+        // 10. Satuan Barang (seperti pcs, renteng, pack, dus, dll)
+        $satuans = [
+            ['nama_satuan' => 'Pcs'],
+            ['nama_satuan' => 'Renteng'],
+            ['nama_satuan' => 'Pack'],
+            ['nama_satuan' => 'Dus'],
+            ['nama_satuan' => 'Botol'],
+            ['nama_satuan' => 'Sachet'],
+            ['nama_satuan' => 'Cup'],
+            ['nama_satuan' => 'Porsi'],
+        ];
+        $createdSatuans = [];
+        foreach ($satuans as $item) {
+            $createdSatuans[$item['nama_satuan']] = SatuanBarang::firstOrCreate(
+                ['nama_satuan' => $item['nama_satuan']],
+                $item
+            );
+        }
+
+        // 11. Master Data Barang (nama barang dan kategori menu cafe)
+        $barangs = [
+            ['nama_barang' => 'Kopi Robusta Blend', 'menu_cafe_id' => $createdMenuCafes['Minuman']->id ?? null],
+            ['nama_barang' => 'Susu Kental Manis Carnation', 'menu_cafe_id' => $createdMenuCafes['Makanan']->id ?? null],
+            ['nama_barang' => 'Sirup Vanilla Monin', 'menu_cafe_id' => $createdMenuCafes['Minuman']->id ?? null],
+            ['nama_barang' => 'Teh Celup Melati Sosro', 'menu_cafe_id' => $createdMenuCafes['Minuman']->id ?? null],
+            ['nama_barang' => 'Kopi Sachet Instan GoodDay', 'menu_cafe_id' => $createdMenuCafes['Minuman']->id ?? null],
+            ['nama_barang' => 'Mie Instan Goreng Indomie', 'menu_cafe_id' => $createdMenuCafes['Makanan']->id ?? null]
+        ];
+        foreach ($barangs as $item) {
+            Barang::updateOrCreate(
+                ['nama_barang' => $item['nama_barang']],
+                ['menu_cafe_id' => $item['menu_cafe_id']]
+            );
         }
     }
 }

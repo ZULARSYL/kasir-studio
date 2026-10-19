@@ -977,6 +977,20 @@ background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary
                                             <span>Master Jabatan</span>
                                         </a>
                                     </li>
+                                    <li class="sidebar-submenu-item">
+                                        <a href="{{ Route::has('admin.master.satuan-barang') ? route('admin.master.satuan-barang') : url('/admin/master/satuan-barang') }}" 
+                                           class="sidebar-submenu-link {{ request()->is('admin/master/satuan-barang*') ? 'active' : '' }}">
+                                            <i class="bi bi-box-seam"></i>
+                                            <span>Satuan Barang</span>
+                                        </a>
+                                    </li>
+                                    <li class="sidebar-submenu-item">
+                                        <a href="{{ Route::has('admin.master.barang') ? route('admin.master.barang') : url('/admin/master/barang') }}" 
+                                           class="sidebar-submenu-link {{ request()->is('admin/master/barang*') ? 'active' : '' }}">
+                                            <i class="bi bi-box2"></i>
+                                            <span>Master Barang</span>
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </li>
