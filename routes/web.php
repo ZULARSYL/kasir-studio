@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FilmController;
 use App\Http\Controllers\Master\GenreFilmController;
 use App\Http\Controllers\Master\HargaPerdurasiController;
 use App\Http\Controllers\Master\JabatanController;
@@ -31,6 +32,14 @@ Route::middleware(['auth', 'role:admin'])
     ->group(function () {
         Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
+        // Film List & Management
+        Route::prefix('film')->name('film.')->group(function () {
+            Route::get('/', [FilmController::class, 'index'])->name('index');
+            Route::post('/', [FilmController::class, 'store'])->name('store');
+            Route::put('/{film}', [FilmController::class, 'update'])->name('update');
+            Route::delete('/{film}', [FilmController::class, 'destroy'])->name('destroy');
+        });
+
         // Master Data CRUD Routes
         Route::prefix('master')->name('master.')->group(function () {
             // 1. Tipe Pembayaran
@@ -56,6 +65,7 @@ Route::middleware(['auth', 'role:admin'])
             // 6. Menu Cafe Perjenis
             Route::get('menu-cafe', [MenuCafeController::class, 'index'])->name('menu-cafe');
             Route::resource('menu-cafe', MenuCafeController::class);
+            Route::resource('menu-cafe-perjenis', MenuCafeController::class);
 
             // 7. Genre Film
             Route::get('genre-film', [GenreFilmController::class, 'index'])->name('genre-film');
