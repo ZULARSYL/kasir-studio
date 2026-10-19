@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Cafe\FakturBarangController;
 use App\Http\Controllers\Cafe\StokCafeController;
 use App\Http\Controllers\FilmController;
+use App\Http\Controllers\Kasir\KasirController;
 use App\Http\Controllers\Master\BarangController;
 use App\Http\Controllers\Master\GenreFilmController;
 use App\Http\Controllers\Master\HargaPerdurasiController;
@@ -108,5 +109,10 @@ Route::middleware(['auth', 'role:kasir'])
     ->name('kasir.')
     ->group(function () {
         Route::view('/', 'kasir.index')->name('index');
-        Route::view('/kasir', 'kasir.kasir')->name('kasir');
+        Route::get('/kasir', [KasirController::class, 'index'])->name('kasir');
+        Route::post('/shift/buka', [KasirController::class, 'bukaShift'])->name('shift.buka');
+        Route::post('/shift/tutup', [KasirController::class, 'tutupShift'])->name('shift.tutup');
+        Route::post('/cek-promo', [KasirController::class, 'cekPromo'])->name('cek-promo');
+        Route::post('/checkout', [KasirController::class, 'checkout'])->name('checkout');
+        Route::get('/struk/{id}', [KasirController::class, 'struk'])->name('struk');
     });
