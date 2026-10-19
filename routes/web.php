@@ -48,6 +48,8 @@ Route::middleware(['auth', 'role:admin'])
         Route::prefix('cafe')->name('cafe.')->group(function () {
             Route::get('stok', [StokCafeController::class, 'index'])->name('stok');
             Route::get('stok/riwayat/{toko_cabang_id}/{barang_id}/{satuan_barang_id}', [StokCafeController::class, 'riwayat'])->name('stok.riwayat');
+            Route::put('stok/{toko_cabang_id}/{barang_id}/{satuan_barang_id}', [StokCafeController::class, 'update'])->name('stok.update');
+            Route::delete('stok/{toko_cabang_id}/{barang_id}/{satuan_barang_id}', [StokCafeController::class, 'destroy'])->name('stok.destroy');
             Route::get('faktur', [FakturBarangController::class, 'index'])->name('faktur');
             Route::resource('faktur', FakturBarangController::class)->except(['edit', 'update']);
         });

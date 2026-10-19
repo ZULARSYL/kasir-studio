@@ -11,7 +11,7 @@
                 <ol class="breadcrumb mb-1 small">
                     <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}" class="text-decoration-none text-muted">Dashboard</a></li>
                     <li class="breadcrumb-item text-muted">Cafe</li>
-                    <li class="breadcrumb-item active text-emerald fw-semibold" aria-current="page">Stok & Inventaris</li>
+                    <li class="breadcrumb-item active text-emerald fw-semibold" aria-current="page">Stok & Koreksi Stok</li>
                 </ol>
             </nav>
             <h3 class="fw-bold mb-0 text-heading">Stok Barang Cafe (Inventaris Outlet)</h3>
@@ -29,75 +29,95 @@
         </div>
     </div>
 
-    <!-- Summary Cards: Total Asset & Total Barang -->
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
-        <!-- Card 1: Total Asset -->
+    <!-- Alert Feedback Notifikasi -->
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show border-0 rounded-4 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-check-circle-fill fs-5 text-success"></i>
+                <div class="fw-semibold">{{ session('success') }}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show border-0 rounded-4 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+                <div class="fw-semibold">{{ session('error') }}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible fade show border-0 rounded-4 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-shield-x fs-4 text-danger"></i>
+                <div>
+                    <h6 class="fw-bold mb-1">Gagal Memproses Data</h6>
+                    <ul class="mb-0 ps-3 small">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    <!-- Summary Cards: 3 Cards Penuh Kesamping (Total Asset, Total Kuantitas Barang, Outlet Aktif) -->
+    <div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
+        <!-- Card 1: Total Nilai Aset -->
         <div class="col">
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-4 d-flex align-items-center gap-3">
                     <div class="stat-icon-wrapper bg-emerald-subtle text-emerald rounded-4 d-flex align-items-center justify-content-center">
                         <i class="bi bi-cash-stack fs-2"></i>
                     </div>
-                    <div>
+                    <div class="flex-grow-1 overflow-hidden">
                         <div class="text-muted small fw-semibold text-uppercase tracking-wider">Total Nilai Aset</div>
-                        <h4 class="fw-bold text-heading font-monospace mb-1 text-emerald">
+                        <h3 class="fw-bold text-heading font-monospace mb-1 text-emerald text-truncate">
                             Rp {{ number_format($totalAsset, 0, ',', '.') }}
-                        </h4>
-                        <div class="text-muted small text-truncate">Akumulasi modal stok faktur</div>
+                        </h3>
+                        <div class="text-muted small text-truncate">Akumulasi modal stok faktur pembelian</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Card 2: Total Barang Fisik -->
+        <!-- Card 2: Total Kuantitas Barang -->
         <div class="col">
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-4 d-flex align-items-center gap-3">
                     <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-4 d-flex align-items-center justify-content-center">
                         <i class="bi bi-boxes fs-2"></i>
                     </div>
-                    <div>
+                    <div class="flex-grow-1 overflow-hidden">
                         <div class="text-muted small fw-semibold text-uppercase tracking-wider">Total Kuantitas Barang</div>
-                        <h4 class="fw-bold text-heading font-monospace mb-1">
-                            {{ number_format($totalBarangFisik, $totalBarangFisik == (int)$totalBarangFisik ? 0 : 2, ',', '.') }}
-                        </h4>
-                        <div class="text-muted small text-truncate">Total unit fisik dari faktur</div>
+                        <h3 class="fw-bold text-heading font-monospace mb-1 text-truncate">
+                            {{ number_format($totalBarangFisik, $totalBarangFisik == (int)$totalBarangFisik ? 0 : 2, ',', '.') }} <span class="fs-6 fw-normal text-muted">Unit</span>
+                        </h3>
+                        <div class="text-muted small text-truncate">Total unit fisik persediaan di seluruh outlet</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Card 3: Total Varian Barang (SKU) -->
-        <div class="col">
-            <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
-                <div class="card-body p-4 d-flex align-items-center gap-3">
-                    <div class="stat-icon-wrapper bg-warning-subtle text-warning rounded-4 d-flex align-items-center justify-content-center">
-                        <i class="bi bi-tag-fill fs-2"></i>
-                    </div>
-                    <div>
-                        <div class="text-muted small fw-semibold text-uppercase tracking-wider">Varian Produk</div>
-                        <h4 class="fw-bold text-heading font-monospace mb-1">
-                            {{ number_format($totalJenisBarang, 0, ',', '.') }}
-                        </h4>
-                        <div class="text-muted small text-truncate">Jenis barang cafe aktif</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 4: Outlet Memiliki Stok -->
+        <!-- Card 3: Outlet Aktif Memiliki Stok -->
         <div class="col">
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-4 d-flex align-items-center gap-3">
                     <div class="stat-icon-wrapper bg-info-subtle text-info rounded-4 d-flex align-items-center justify-content-center">
                         <i class="bi bi-shop fs-2"></i>
                     </div>
-                    <div>
+                    <div class="flex-grow-1 overflow-hidden">
                         <div class="text-muted small fw-semibold text-uppercase tracking-wider">Outlet Aktif</div>
-                        <h4 class="fw-bold text-heading font-monospace mb-1">
-                            {{ number_format($totalOutlet, 0, ',', '.') }}
-                        </h4>
-                        <div class="text-muted small text-truncate">Cabang dengan persediaan stok</div>
+                        <h3 class="fw-bold text-heading font-monospace mb-1 text-truncate">
+                            {{ number_format($totalOutlet, 0, ',', '.') }} <span class="fs-6 fw-normal text-muted">Cabang</span>
+                        </h3>
+                        <div class="text-muted small text-truncate">Toko cabang dengan persediaan stok aktif</div>
                     </div>
                 </div>
             </div>
@@ -162,7 +182,7 @@
                 <h5 class="card-title fw-bold text-heading mb-0">
                     <i class="bi bi-box-seam-fill text-emerald me-2"></i>Daftar Persediaan Stok Barang
                 </h5>
-                <p class="text-muted small mb-0">Data kuantitas stok otomatis terakumulasi dari faktur pembelian/grosir barang.</p>
+                <p class="text-muted small mb-0">Kuantitas stok terakumulasi dari faktur masuk. Anda dapat melihat detail riwayat, mengedit/koreksi stok, serta menghapus data.</p>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-light text-dark border px-3 py-2 rounded-3 small">
@@ -177,14 +197,14 @@
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4 text-muted small fw-bold" style="width: 50px;">NO</th>
-                            <th class="text-muted small fw-bold">NAMA BARANG</th>
+                            <th class="text-muted small fw-bold" style="min-width: 200px;">NAMA BARANG</th>
                             <th class="text-muted small fw-bold">NAMA OUTLET (CABANG)</th>
                             <th class="text-muted small fw-bold">KATEGORI (MENU CAFE)</th>
                             <th class="text-muted small fw-bold">SATUAN</th>
                             <th class="text-muted small fw-bold text-center">STOK DARI FAKTUR</th>
                             <th class="text-muted small fw-bold text-end">NILAI ASET (MODAL)</th>
                             <th class="text-muted small fw-bold text-end">HARGA JUAL KASIR</th>
-                            <th class="text-end pe-4 text-muted small fw-bold" style="width: 140px;">AKSI</th>
+                            <th class="text-end pe-4 text-muted small fw-bold" style="min-width: 210px;">AKSI</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -248,17 +268,53 @@
                                     Rp {{ number_format($item->harga_jual_terakhir, 0, ',', '.') }}
                                 </td>
                                 <td class="text-end pe-4">
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-emerald rounded-3 btn-riwayat-faktur" 
-                                            data-cabang-id="{{ $item->toko_cabang_id }}"
-                                            data-barang-id="{{ $item->barang_id }}"
-                                            data-satuan-id="{{ $item->satuan_barang_id }}"
-                                            data-nama-barang="{{ $item->nama_barang }}"
-                                            data-nama-cabang="{{ $item->nama_cabang }}"
-                                            data-satuan="{{ $item->nama_satuan }}"
-                                            title="Lihat Riwayat Faktur Masuk">
-                                        <i class="bi bi-clock-history me-1"></i> Riwayat
-                                    </button>
+                                    <div class="d-inline-flex align-items-center gap-1">
+                                        <!-- Aksi 1: Detail -->
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-info rounded-2 px-2 py-1 btn-detail-stok"
+                                                data-cabang-id="{{ $item->toko_cabang_id }}"
+                                                data-barang-id="{{ $item->barang_id }}"
+                                                data-satuan-id="{{ $item->satuan_barang_id }}"
+                                                data-nama-barang="{{ $item->nama_barang }}"
+                                                data-nama-cabang="{{ $item->nama_cabang }}"
+                                                data-kategori="{{ $item->nama_kategori ?? 'Umum' }}"
+                                                data-satuan="{{ $item->nama_satuan }}"
+                                                data-stok="{{ $item->total_stok }}"
+                                                data-asset="{{ $item->total_asset_item }}"
+                                                data-avg-harga="{{ $item->avg_harga_awal }}"
+                                                data-harga-jual="{{ $item->harga_jual_terakhir }}"
+                                                title="Lihat Detail & Riwayat Faktur">
+                                            <i class="bi bi-eye me-1"></i> Detail
+                                        </button>
+
+                                        <!-- Aksi 2: Edit / Koreksi -->
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-warning rounded-2 px-2 py-1 btn-edit-stok"
+                                                data-cabang-id="{{ $item->toko_cabang_id }}"
+                                                data-barang-id="{{ $item->barang_id }}"
+                                                data-satuan-id="{{ $item->satuan_barang_id }}"
+                                                data-nama-barang="{{ $item->nama_barang }}"
+                                                data-nama-cabang="{{ $item->nama_cabang }}"
+                                                data-satuan="{{ $item->nama_satuan }}"
+                                                data-stok="{{ $item->total_stok }}"
+                                                data-avg-harga="{{ $item->avg_harga_awal }}"
+                                                data-harga-jual="{{ $item->harga_jual_terakhir }}"
+                                                title="Edit / Koreksi Stok & Harga Jual">
+                                            <i class="bi bi-pencil-square me-1"></i> Edit
+                                        </button>
+
+                                        <!-- Aksi 3: Hapus -->
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1 btn-hapus-stok"
+                                                data-cabang-id="{{ $item->toko_cabang_id }}"
+                                                data-barang-id="{{ $item->barang_id }}"
+                                                data-satuan-id="{{ $item->satuan_barang_id }}"
+                                                data-nama-barang="{{ $item->nama_barang }}"
+                                                data-nama-cabang="{{ $item->nama_cabang }}"
+                                                title="Hapus Stok Item Ini">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -305,62 +361,212 @@
     </div>
 </div>
 
-<!-- Modal Riwayat Faktur Masuk Barang -->
-<div class="modal fade" id="modalRiwayatStok" tabindex="-1" aria-labelledby="modalRiwayatStokLabel" aria-hidden="true">
+<!-- ======================================================== -->
+<!-- MODAL 1: DETAIL STOK & RIWAYAT FAKTUR                    -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modalDetailStok" tabindex="-1" aria-labelledby="modalDetailStokLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header border-bottom py-3">
                 <div>
-                    <h5 class="modal-title fw-bold text-heading" id="modalRiwayatStokLabel">
-                        <i class="bi bi-clock-history text-emerald me-2"></i>Riwayat Faktur Masuk
+                    <h5 class="modal-title fw-bold text-heading" id="modalDetailStokLabel">
+                        <i class="bi bi-info-circle-fill text-info me-2"></i>Detail Persediaan & Riwayat Faktur
                     </h5>
-                    <p class="text-muted small mb-0" id="riwayatStokSubheading">Detail faktur pembelian/grosir yang mengisi stok barang ini.</p>
+                    <p class="text-muted small mb-0" id="detailStokSubheading">Informasi lengkap stok barang dan mutasi faktur masuk.</p>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-0">
+            <div class="modal-body p-4">
+                <!-- Overview Cards dalam Modal -->
+                <div class="row g-2 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded-3 text-center border">
+                            <div class="text-muted small fw-semibold">TOTAL STOK</div>
+                            <div class="fs-5 fw-bold text-emerald font-monospace" id="detailCardStok">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded-3 text-center border">
+                            <div class="text-muted small fw-semibold">NILAI ASET</div>
+                            <div class="fs-6 fw-bold text-dark font-monospace" id="detailCardAsset">Rp 0</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded-3 text-center border">
+                            <div class="text-muted small fw-semibold">AVG MODAL</div>
+                            <div class="fs-6 fw-bold text-muted font-monospace" id="detailCardAvgHarga">Rp 0</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded-3 text-center border">
+                            <div class="text-muted small fw-semibold">HARGA JUAL KASIR</div>
+                            <div class="fs-6 fw-bold text-primary font-monospace" id="detailCardHargaJual">Rp 0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-heading mb-2">
+                    <i class="bi bi-clock-history me-1 text-emerald"></i>Riwayat Faktur Masuk (Pembelian / Grosir)
+                </h6>
+
                 <!-- Loading State -->
-                <div id="riwayatLoading" class="text-center py-5">
+                <div id="detailLoading" class="text-center py-4">
                     <div class="spinner-border text-emerald" role="status">
                         <span class="visually-hidden">Memuat data...</span>
                     </div>
                     <div class="text-muted small mt-2">Mengambil riwayat faktur barang...</div>
                 </div>
 
-                <!-- Table Riwayat -->
-                <div id="riwayatContent" class="table-responsive" style="display: none;">
+                <!-- Table Riwayat Faktur -->
+                <div id="detailContent" class="table-responsive border rounded-3" style="display: none;">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-4 text-muted small fw-bold">NO FAKTUR</th>
+                                <th class="ps-3 text-muted small fw-bold">NO FAKTUR</th>
                                 <th class="text-muted small fw-bold">TANGGAL</th>
                                 <th class="text-muted small fw-bold">PEMASOK</th>
                                 <th class="text-muted small fw-bold text-center">QTY MASUK</th>
                                 <th class="text-muted small fw-bold text-end">HARGA MODAL</th>
                                 <th class="text-muted small fw-bold text-end">HARGA JUAL</th>
-                                <th class="text-muted small fw-bold text-end pe-4">SUBTOTAL</th>
+                                <th class="text-muted small fw-bold text-end pe-3">SUBTOTAL</th>
                             </tr>
                         </thead>
-                        <tbody id="riwayatTableBody">
+                        <tbody id="detailTableBody">
                             <!-- Injected by JavaScript -->
                         </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <td colspan="3" class="ps-4 fw-bold text-dark">Total Akumulasi dari Faktur:</td>
-                                <td class="text-center fw-bold text-emerald font-monospace" id="riwayatTotalQty">0</td>
-                                <td colspan="2"></td>
-                                <td class="text-end fw-bold text-emerald font-monospace pe-4" id="riwayatTotalSubtotal">Rp 0</td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
             </div>
             <div class="modal-footer border-top py-2">
                 <button type="button" class="btn btn-secondary rounded-3 px-3" data-bs-dismiss="modal">Tutup</button>
-                <a href="{{ route('admin.cafe.faktur.index') }}" class="btn btn-emerald rounded-3 px-3" id="btnLihatSemuaFaktur">
-                    <i class="bi bi-receipt me-1"></i> Buka Menu Faktur
+                <a href="{{ route('admin.cafe.faktur.index') }}" class="btn btn-emerald rounded-3 px-3" target="_blank">
+                    <i class="bi bi-receipt me-1"></i> Kelola Faktur
                 </a>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL 2: EDIT / KOREKSI STOK BARANG                      -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modalEditStok" tabindex="-1" aria-labelledby="modalEditStokLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form id="formEditStok" method="POST" action="">
+                @csrf
+                @method('PUT')
+                <div class="modal-header border-bottom py-3">
+                    <div>
+                        <h5 class="modal-title fw-bold text-heading" id="modalEditStokLabel">
+                            <i class="bi bi-pencil-square text-warning me-2"></i>Edit / Koreksi Stok Barang
+                        </h5>
+                        <p class="text-muted small mb-0">Penyesuaian kuantitas stok fisik dan harga penjualan kasir.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Info Barang Readonly -->
+                    <div class="bg-light p-3 rounded-3 mb-3 border">
+                        <div class="row g-2 small">
+                            <div class="col-7">
+                                <span class="text-muted d-block">Nama Barang:</span>
+                                <strong class="text-dark" id="editLabelNamaBarang">-</strong>
+                            </div>
+                            <div class="col-5">
+                                <span class="text-muted d-block">Outlet Cabang:</span>
+                                <strong class="text-dark" id="editLabelNamaCabang">-</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Kuantitas Stok Baru -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">
+                            Jumlah Stok Fisik (Koreksi) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" step="any" min="0" name="stok" id="inputEditStok" class="form-control rounded-start-3 font-monospace fw-bold text-center" required>
+                            <span class="input-group-text bg-light text-muted font-monospace" id="editLabelSatuan">Pcs</span>
+                        </div>
+                        <div class="form-text small">Sesuaikan kuantitas stok aktual barang di outlet ini (misal hasil stock opname).</div>
+                    </div>
+
+                    <!-- Input Harga Jual Kasir -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">
+                            Harga Penjualan Kasir (Rp) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted">Rp</span>
+                            <input type="number" step="any" min="0" name="harga_jual" id="inputEditHargaJual" class="form-control rounded-end-3 font-monospace fw-bold text-end" required>
+                        </div>
+                        <div class="form-text small">Harga yang akan digunakan oleh kasir pada menu POS penjualan.</div>
+                    </div>
+
+                    <!-- Input Harga Modal Beli (Awal) -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">
+                            Harga Modal (Awal) (Rp)
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted">Rp</span>
+                            <input type="number" step="any" min="0" name="harga_awal" id="inputEditHargaAwal" class="form-control rounded-end-3 font-monospace text-end">
+                        </div>
+                        <div class="form-text small">Harga modal pembelian per satuan (digunakan untuk menghitung nilai aset).</div>
+                    </div>
+
+                    <!-- Catatan Koreksi -->
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Catatan / Alasan Koreksi (Opsional)</label>
+                        <textarea name="catatan" rows="2" class="form-control rounded-3" placeholder="Contoh: Koreksi selisih stok opname fisik, barang rusak, penyesuaian harga jual..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-emerald rounded-3 px-4 fw-semibold">
+                        <i class="bi bi-check2-circle me-1"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL 3: KONFIRMASI HAPUS STOK                           -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modalHapusStok" tabindex="-1" aria-labelledby="modalHapusStokLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form id="formHapusStok" method="POST" action="">
+                @csrf
+                @method('DELETE')
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-danger" id="modalHapusStokLabel">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Konfirmasi Hapus Stok
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-trash-fill text-danger display-4"></i>
+                    </div>
+                    <h5 class="fw-bold text-heading mb-2">Hapus Persediaan Stok Ini?</h5>
+                    <p class="text-muted small mb-3">
+                        Anda akan menghapus data stok barang <strong class="text-dark" id="hapusLabelNamaBarang">-</strong> di outlet <strong class="text-dark" id="hapusLabelNamaCabang">-</strong>.
+                    </p>
+                    <div class="alert alert-warning text-start border-0 rounded-3 small p-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i> Rincian faktur masuk untuk barang ini di outlet terkait akan dihapus dan nilai total nota faktur akan disesuaikan otomatis.
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2 d-flex justify-content-between">
+                    <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger rounded-3 px-4 fw-semibold">
+                        <i class="bi bi-trash-fill me-1"></i> Ya, Hapus Stok
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -421,46 +627,66 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const modalEl = document.getElementById('modalRiwayatStok');
-    const modalInstance = modalEl ? new bootstrap.Modal(modalEl) : null;
-
-    const riwayatLoading = document.getElementById('riwayatLoading');
-    const riwayatContent = document.getElementById('riwayatContent');
-    const riwayatTableBody = document.getElementById('riwayatTableBody');
-    const riwayatSubheading = document.getElementById('riwayatStokSubheading');
-    const riwayatTotalQty = document.getElementById('riwayatTotalQty');
-    const riwayatTotalSubtotal = document.getElementById('riwayatTotalSubtotal');
-
+    // -------------------------------------------------------------
+    // HELPERS
+    // -------------------------------------------------------------
     function formatRupiah(num) {
-        return 'Rp ' + Number(num).toLocaleString('id-ID');
+        return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
     }
 
-    document.querySelectorAll('.btn-riwayat-faktur').forEach(btn => {
+    // -------------------------------------------------------------
+    // 1. AKSI DETAIL
+    // -------------------------------------------------------------
+    const modalDetailEl = document.getElementById('modalDetailStok');
+    const modalDetailInstance = modalDetailEl ? bootstrap.Modal.getOrCreateInstance(modalDetailEl) : null;
+
+    const detailLoading = document.getElementById('detailLoading');
+    const detailContent = document.getElementById('detailContent');
+    const detailTableBody = document.getElementById('detailTableBody');
+    const detailSubheading = document.getElementById('detailStokSubheading');
+    const detailCardStok = document.getElementById('detailCardStok');
+    const detailCardAsset = document.getElementById('detailCardAsset');
+    const detailCardAvgHarga = document.getElementById('detailCardAvgHarga');
+    const detailCardHargaJual = document.getElementById('detailCardHargaJual');
+
+    document.querySelectorAll('.btn-detail-stok').forEach(btn => {
         btn.addEventListener('click', function () {
             const cabangId = this.getAttribute('data-cabang-id');
             const barangId = this.getAttribute('data-barang-id');
             const satuanId = this.getAttribute('data-satuan-id');
             const namaBarang = this.getAttribute('data-nama-barang');
             const namaCabang = this.getAttribute('data-nama-cabang');
+            const kategori = this.getAttribute('data-kategori');
             const satuan = this.getAttribute('data-satuan');
+            const stok = Number(this.getAttribute('data-stok') || 0);
+            const asset = Number(this.getAttribute('data-asset') || 0);
+            const avgHarga = Number(this.getAttribute('data-avg-harga') || 0);
+            const hargaJual = Number(this.getAttribute('data-harga-jual') || 0);
 
-            if (riwayatSubheading) {
-                riwayatSubheading.textContent = `${namaBarang} (${satuan}) di Outlet ${namaCabang}`;
+            if (detailSubheading) {
+                detailSubheading.textContent = `${namaBarang} [${kategori}] di Outlet ${namaCabang}`;
             }
 
-            // Tampilkan loading state
-            if (riwayatLoading) riwayatLoading.style.display = 'block';
-            if (riwayatContent) riwayatContent.style.display = 'none';
-            if (riwayatTableBody) riwayatTableBody.innerHTML = '';
+            if (detailCardStok) {
+                detailCardStok.textContent = (Number.isInteger(stok) ? stok : stok.toFixed(2)) + ' ' + satuan;
+            }
+            if (detailCardAsset) detailCardAsset.textContent = formatRupiah(asset);
+            if (detailCardAvgHarga) detailCardAvgHarga.textContent = formatRupiah(avgHarga);
+            if (detailCardHargaJual) detailCardHargaJual.textContent = formatRupiah(hargaJual);
 
-            modalInstance.show();
+            // Loading state
+            if (detailLoading) detailLoading.style.display = 'block';
+            if (detailContent) detailContent.style.display = 'none';
+            if (detailTableBody) detailTableBody.innerHTML = '';
+
+            if (modalDetailInstance) modalDetailInstance.show();
 
             const url = `{{ url('/admin/cafe/stok/riwayat') }}/${cabangId}/${barangId}/${satuanId}`;
             fetch(url)
                 .then(res => res.json())
                 .then(res => {
-                    if (riwayatLoading) riwayatLoading.style.display = 'none';
-                    if (riwayatContent) riwayatContent.style.display = 'block';
+                    if (detailLoading) detailLoading.style.display = 'none';
+                    if (detailContent) detailContent.style.display = 'block';
 
                     if (res.data && res.data.length > 0) {
                         let rows = '';
@@ -469,7 +695,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             const qtyFormatted = Number.isInteger(qty) ? qty : qty.toFixed(2);
                             rows += `
                                 <tr>
-                                    <td class="ps-4 font-monospace fw-bold text-dark">
+                                    <td class="ps-3 font-monospace fw-bold text-dark">
                                         <a href="{{ url('/admin/cafe/faktur') }}/${item.faktur_id}" class="text-decoration-none text-emerald" target="_blank" title="Buka Faktur">
                                             ${item.nomor_faktur} <i class="bi bi-box-arrow-up-right small"></i>
                                         </a>
@@ -479,31 +705,25 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <td class="text-center fw-bold font-monospace">${qtyFormatted} ${item.nama_satuan}</td>
                                     <td class="text-end font-monospace">${formatRupiah(item.harga_awal)}</td>
                                     <td class="text-end font-monospace text-emerald">${formatRupiah(item.harga_jual)}</td>
-                                    <td class="text-end pe-4 font-monospace fw-bold">${formatRupiah(item.subtotal)}</td>
+                                    <td class="text-end pe-3 font-monospace fw-bold">${formatRupiah(item.subtotal)}</td>
                                 </tr>
                             `;
                         });
-                        riwayatTableBody.innerHTML = rows;
-
-                        const totalQty = Number(res.total_masuk);
-                        riwayatTotalQty.textContent = (Number.isInteger(totalQty) ? totalQty : totalQty.toFixed(2)) + ' ' + satuan;
-                        riwayatTotalSubtotal.textContent = formatRupiah(res.total_asset);
+                        detailTableBody.innerHTML = rows;
                     } else {
-                        riwayatTableBody.innerHTML = `
+                        detailTableBody.innerHTML = `
                             <tr>
                                 <td colspan="7" class="text-center py-4 text-muted">
                                     Tidak ditemukan riwayat faktur untuk item ini.
                                 </td>
                             </tr>
                         `;
-                        riwayatTotalQty.textContent = '0 ' + satuan;
-                        riwayatTotalSubtotal.textContent = 'Rp 0';
                     }
                 })
-                .catch(err => {
-                    if (riwayatLoading) riwayatLoading.style.display = 'none';
-                    if (riwayatContent) riwayatContent.style.display = 'block';
-                    riwayatTableBody.innerHTML = `
+                .catch(() => {
+                    if (detailLoading) detailLoading.style.display = 'none';
+                    if (detailContent) detailContent.style.display = 'block';
+                    detailTableBody.innerHTML = `
                         <tr>
                             <td colspan="7" class="text-center py-4 text-danger">
                                 Terjadi kendala saat memuat riwayat faktur. Silakan coba kembali.
@@ -511,6 +731,75 @@ document.addEventListener('DOMContentLoaded', function () {
                         </tr>
                     `;
                 });
+        });
+    });
+
+    // -------------------------------------------------------------
+    // 2. AKSI EDIT / KOREKSI
+    // -------------------------------------------------------------
+    const modalEditEl = document.getElementById('modalEditStok');
+    const modalEditInstance = modalEditEl ? bootstrap.Modal.getOrCreateInstance(modalEditEl) : null;
+    const formEdit = document.getElementById('formEditStok');
+    const editLabelNamaBarang = document.getElementById('editLabelNamaBarang');
+    const editLabelNamaCabang = document.getElementById('editLabelNamaCabang');
+    const editLabelSatuan = document.getElementById('editLabelSatuan');
+    const inputEditStok = document.getElementById('inputEditStok');
+    const inputEditHargaJual = document.getElementById('inputEditHargaJual');
+    const inputEditHargaAwal = document.getElementById('inputEditHargaAwal');
+
+    document.querySelectorAll('.btn-edit-stok').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const cabangId = this.getAttribute('data-cabang-id');
+            const barangId = this.getAttribute('data-barang-id');
+            const satuanId = this.getAttribute('data-satuan-id');
+            const namaBarang = this.getAttribute('data-nama-barang');
+            const namaCabang = this.getAttribute('data-nama-cabang');
+            const satuan = this.getAttribute('data-satuan');
+            const stok = Number(this.getAttribute('data-stok') || 0);
+            const avgHarga = Number(this.getAttribute('data-avg-harga') || 0);
+            const hargaJual = Number(this.getAttribute('data-harga-jual') || 0);
+
+            if (formEdit) {
+                formEdit.action = `{{ url('/admin/cafe/stok') }}/${cabangId}/${barangId}/${satuanId}`;
+            }
+
+            if (editLabelNamaBarang) editLabelNamaBarang.textContent = namaBarang;
+            if (editLabelNamaCabang) editLabelNamaCabang.textContent = namaCabang;
+            if (editLabelSatuan) editLabelSatuan.textContent = satuan;
+
+            if (inputEditStok) inputEditStok.value = Number.isInteger(stok) ? stok : stok.toFixed(2);
+            if (inputEditHargaJual) inputEditHargaJual.value = Math.round(hargaJual);
+            if (inputEditHargaAwal) inputEditHargaAwal.value = Math.round(avgHarga);
+
+            if (modalEditInstance) modalEditInstance.show();
+        });
+    });
+
+    // -------------------------------------------------------------
+    // 3. AKSI HAPUS
+    // -------------------------------------------------------------
+    const modalHapusEl = document.getElementById('modalHapusStok');
+    const modalHapusInstance = modalHapusEl ? bootstrap.Modal.getOrCreateInstance(modalHapusEl) : null;
+    const formHapus = document.getElementById('formHapusStok');
+    const hapusLabelNamaBarang = document.getElementById('hapusLabelNamaBarang');
+    const hapusLabelNamaCabang = document.getElementById('hapusLabelNamaCabang');
+
+    document.querySelectorAll('.btn-hapus-stok').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const cabangId = this.getAttribute('data-cabang-id');
+            const barangId = this.getAttribute('data-barang-id');
+            const satuanId = this.getAttribute('data-satuan-id');
+            const namaBarang = this.getAttribute('data-nama-barang');
+            const namaCabang = this.getAttribute('data-nama-cabang');
+
+            if (formHapus) {
+                formHapus.action = `{{ url('/admin/cafe/stok') }}/${cabangId}/${barangId}/${satuanId}`;
+            }
+
+            if (hapusLabelNamaBarang) hapusLabelNamaBarang.textContent = namaBarang;
+            if (hapusLabelNamaCabang) hapusLabelNamaCabang.textContent = namaCabang;
+
+            if (modalHapusInstance) modalHapusInstance.show();
         });
     });
 });

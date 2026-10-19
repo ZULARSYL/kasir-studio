@@ -151,4 +151,108 @@ class StokCafeController extends Controller
             'data' => $riwayats,
         ]);
     }
+
+    /**
+     * Edit / Koreksi stok barang dan penyesuaian harga jual kasir.
+     */
+    public function update(Request $request, $tokoCabangId, $barangId, $satuanBarangId)
+    {
+        $validated = $request->validate([
+            'stok' => 'required|numeric|min:0',
+            'harga_jual' => 'required|numeric|min:0',
+            'harga_awal' => 'nullable|numeric|min:0',
+            'catatan' => 'nullable|string|max:255',
+        ]);
+
+        $details = FakturBarangDetail::whereHas('fakturBarang', function ($q) use ($tokoCabangId) {
+                $q->where('toko_cabang_id', $tokoCabangId);
+            })
+            ->where('barang_id', $barangId)
+            ->where('satuan_barang_id', $satuanBarangId)
+            ->orderBy('id', 'asc')
+            ->get();
+
+        if ($details->isEmpty()) {
+            return redirect()->route('admin.cafe.stok')
+                ->with('error', 'Data stok barang tidak ditemukan.');
+        }
+
+        DB::transaction(function () use ($details, $validated) {
+            $newTotalStok = (float) $validated['stok'];
+            $newHargaJual = (float) $validated['harga_jual'];
+            $newHargaAwal = isset($validated['harga_awal']) && $validated['harga_awal'] !== '' 
+                ? (float) $validated['harga_awal'] 
+                : null;
+
+            $remaining = $newTotalStok;
+            $totalCount = $details->count();
+
+            foreach ($details as $index => $detail) {
+                if ($index === $totalCount - 1) {
+                    $detail->qty = max(0, $remaining);
+                } else {
+                    if ($remaining >= (float) $detail->qty) {
+                        $remaining -= (float) $detail->qty;
+                    } else {
+                        $detail->qty = $remaining;
+                        $remaining = 0;
+                    }
+                }
+
+                $detail->harga_jual = $newHargaJual;
+                if ($newHargaAwal !== null) {
+                    $detail->harga_awal = $newHargaAwal;
+                }
+                $detail->subtotal = (float) $detail->qty * (float) $detail->harga_awal;
+                $detail->save();
+
+                // Sinkronisasi total nominal faktur induk
+                $faktur = $detail->fakturBarang;
+                if ($faktur) {
+                    $faktur->total_nominal = $faktur->details()->sum('subtotal') ?: 0;
+                    $faktur->save();
+                }
+            }
+        });
+
+        return redirect()->route('admin.cafe.stok')
+            ->with('success', 'Stok dan harga jual barang berhasil diperbarui!');
+    }
+
+    /**
+     * Hapus persediaan stok item barang dari outlet cabang terkait.
+     */
+    public function destroy($tokoCabangId, $barangId, $satuanBarangId)
+    {
+        $details = FakturBarangDetail::whereHas('fakturBarang', function ($q) use ($tokoCabangId) {
+                $q->where('toko_cabang_id', $tokoCabangId);
+            })
+            ->where('barang_id', $barangId)
+            ->where('satuan_barang_id', $satuanBarangId)
+            ->get();
+
+        if ($details->isEmpty()) {
+            return redirect()->route('admin.cafe.stok')
+                ->with('error', 'Data stok barang tidak ditemukan.');
+        }
+
+        DB::transaction(function () use ($details) {
+            $fakturIds = $details->pluck('faktur_barang_id')->unique();
+
+            foreach ($details as $detail) {
+                $detail->delete();
+            }
+
+            foreach ($fakturIds as $fakturId) {
+                $faktur = \App\Models\FakturBarang::find($fakturId);
+                if ($faktur) {
+                    $faktur->total_nominal = $faktur->details()->sum('subtotal') ?: 0;
+                    $faktur->save();
+                }
+            }
+        });
+
+        return redirect()->route('admin.cafe.stok')
+            ->with('success', 'Stok barang pada outlet tersebut berhasil dihapus!');
+    }
 }

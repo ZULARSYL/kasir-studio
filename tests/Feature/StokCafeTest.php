@@ -300,4 +300,158 @@ class StokCafeTest extends TestCase
             'pemasok' => 'Agen Banda Aceh',
         ]);
     }
+
+    /**
+     * Test tampilan kartu statistik penuh kesamping (3 kolom) dan keberadaan tombol aksi Detail, Edit, Hapus.
+     */
+    public function test_stok_page_displays_three_full_width_cards_and_action_buttons(): void
+    {
+        $admin = $this->getAdmin();
+        $outlet = TokoCabang::first();
+        $kategori = MenuCafe::first();
+        $satuan = SatuanBarang::first();
+        $barang = Barang::create(['nama_barang' => 'Espresso Single', 'menu_cafe_id' => $kategori->id]);
+
+        $faktur = FakturBarang::create([
+            'nomor_faktur' => 'FKT-CARD-001',
+            'toko_cabang_id' => $outlet->id,
+            'tanggal_faktur' => '2026-10-19',
+            'total_nominal' => 100000,
+            'user_id' => $admin->id,
+        ]);
+        FakturBarangDetail::create([
+            'faktur_barang_id' => $faktur->id,
+            'barang_id' => $barang->id,
+            'satuan_barang_id' => $satuan->id,
+            'qty' => 10,
+            'harga_awal' => 10000,
+            'harga_jual' => 15000,
+            'subtotal' => 100000,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.cafe.stok'));
+        $response->assertOk();
+
+        // Cek baris kartu 3 kolom penuh kesamping (row-cols-md-3)
+        $response->assertSee('row-cols-md-3');
+        $response->assertSee('Total Nilai Aset');
+        $response->assertSee('Total Kuantitas Barang');
+        $response->assertSee('Outlet Aktif');
+
+        // Cek tombol aksi per item: Detail, Edit, Hapus
+        $response->assertSee('btn-detail-stok');
+        $response->assertSee('btn-edit-stok');
+        $response->assertSee('btn-hapus-stok');
+        $response->assertSee('Detail');
+        $response->assertSee('Edit');
+    }
+
+    /**
+     * Test aksi edit/koreksi stok dan harga jual kasir.
+     */
+    public function test_update_stok_and_price_successfully(): void
+    {
+        $admin = $this->getAdmin();
+        $outlet = TokoCabang::first();
+        $kategori = MenuCafe::first();
+        $satuan = SatuanBarang::first();
+        $barang = Barang::create(['nama_barang' => 'Ice Latte Hazelnut', 'menu_cafe_id' => $kategori->id]);
+
+        $faktur = FakturBarang::create([
+            'nomor_faktur' => 'FKT-EDIT-001',
+            'toko_cabang_id' => $outlet->id,
+            'tanggal_faktur' => '2026-10-19',
+            'total_nominal' => 200000,
+            'user_id' => $admin->id,
+        ]);
+        $detail = FakturBarangDetail::create([
+            'faktur_barang_id' => $faktur->id,
+            'barang_id' => $barang->id,
+            'satuan_barang_id' => $satuan->id,
+            'qty' => 20,
+            'harga_awal' => 10000,
+            'harga_jual' => 15000,
+            'subtotal' => 200000,
+        ]);
+
+        // Kirim PUT request untuk koreksi stok ke 35 dan harga jual ke 22.000
+        $response = $this->actingAs($admin)->put(route('admin.cafe.stok.update', [
+            'toko_cabang_id' => $outlet->id,
+            'barang_id' => $barang->id,
+            'satuan_barang_id' => $satuan->id,
+        ]), [
+            'stok' => 35,
+            'harga_jual' => 22000,
+            'harga_awal' => 12000,
+            'catatan' => 'Hasil opname mingguan',
+        ]);
+
+        $response->assertRedirect(route('admin.cafe.stok'));
+        $response->assertSessionHas('success');
+
+        // Pastikan detail diperbarui di database
+        $this->assertDatabaseHas('faktur_barang_details', [
+            'id' => $detail->id,
+            'qty' => 35,
+            'harga_jual' => 22000,
+            'harga_awal' => 12000,
+            'subtotal' => 420000, // 35 * 12.000
+        ]);
+
+        // Pastikan total nominal faktur tersinkronisasi
+        $this->assertDatabaseHas('faktur_barangs', [
+            'id' => $faktur->id,
+            'total_nominal' => 420000,
+        ]);
+    }
+
+    /**
+     * Test aksi hapus stok barang pada outlet.
+     */
+    public function test_destroy_stok_item_successfully(): void
+    {
+        $admin = $this->getAdmin();
+        $outlet = TokoCabang::first();
+        $kategori = MenuCafe::first();
+        $satuan = SatuanBarang::first();
+        $barang = Barang::create(['nama_barang' => 'Teh Manis Dingin', 'menu_cafe_id' => $kategori->id]);
+
+        $faktur = FakturBarang::create([
+            'nomor_faktur' => 'FKT-DEL-001',
+            'toko_cabang_id' => $outlet->id,
+            'tanggal_faktur' => '2026-10-19',
+            'total_nominal' => 50000,
+            'user_id' => $admin->id,
+        ]);
+        $detail = FakturBarangDetail::create([
+            'faktur_barang_id' => $faktur->id,
+            'barang_id' => $barang->id,
+            'satuan_barang_id' => $satuan->id,
+            'qty' => 10,
+            'harga_awal' => 5000,
+            'harga_jual' => 8000,
+            'subtotal' => 50000,
+        ]);
+
+        // Kirim DELETE request
+        $response = $this->actingAs($admin)->delete(route('admin.cafe.stok.destroy', [
+            'toko_cabang_id' => $outlet->id,
+            'barang_id' => $barang->id,
+            'satuan_barang_id' => $satuan->id,
+        ]));
+
+        $response->assertRedirect(route('admin.cafe.stok'));
+        $response->assertSessionHas('success');
+
+        // Pastikan detail terhapus dari database
+        $this->assertDatabaseMissing('faktur_barang_details', [
+            'id' => $detail->id,
+        ]);
+
+        // Total nominal faktur menjadi 0
+        $this->assertDatabaseHas('faktur_barangs', [
+            'id' => $faktur->id,
+            'total_nominal' => 0,
+        ]);
+    }
 }
