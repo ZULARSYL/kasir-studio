@@ -254,7 +254,7 @@ class MasterDataTest extends TestCase
         // Cafe (Makanan, Minuman, Snack)
         $resp = $this->actingAs($admin)->post(route('admin.master.menu-cafe.store'), ['nama' => 'Dessert']);
         $resp->assertRedirect(route('admin.master.menu-cafe.index'));
-        $this->assertDatabaseHas('menu_cafe_jenis', ['nama' => 'Dessert']);
+        $this->assertDatabaseHas('menu_cafe', ['nama' => 'Dessert']);
 
         // Genre Film
         $resp = $this->actingAs($admin)->post(route('admin.master.genre-film.store'), ['nama_genre' => 'Cyberpunk']);
