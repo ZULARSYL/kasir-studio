@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Cafe\FakturBarangController;
 use App\Http\Controllers\FilmController;
 use App\Http\Controllers\Master\BarangController;
 use App\Http\Controllers\Master\GenreFilmController;
@@ -40,6 +41,12 @@ Route::middleware(['auth', 'role:admin'])
             Route::post('/', [FilmController::class, 'store'])->name('store');
             Route::put('/{film}', [FilmController::class, 'update'])->name('update');
             Route::delete('/{film}', [FilmController::class, 'destroy'])->name('destroy');
+        });
+
+        // Cafe Management (Faktur Barang, Stok, Menu)
+        Route::prefix('cafe')->name('cafe.')->group(function () {
+            Route::get('faktur', [FakturBarangController::class, 'index'])->name('faktur');
+            Route::resource('faktur', FakturBarangController::class)->except(['edit', 'update']);
         });
 
         // Master Data CRUD Routes
