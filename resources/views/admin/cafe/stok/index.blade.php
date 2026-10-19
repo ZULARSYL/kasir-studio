@@ -14,7 +14,7 @@
                     <li class="breadcrumb-item active text-emerald fw-semibold" aria-current="page">Stok & Koreksi Stok</li>
                 </ol>
             </nav>
-            <h3 class="fw-bold mb-0 text-heading">Stok Barang Cafe (Inventaris Outlet)</h3>
+            <h3 class="fw-bold mb-0 text-heading">Stok Barang</h3>
             <p class="text-muted small mb-0">Monitoring stok barang per outlet cabang, kategori menu cafe, satuan, dan akumulasi nilai aset yang bersumber dari faktur barang.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -81,7 +81,6 @@
                         <h3 class="fw-bold text-heading font-monospace mb-1 text-emerald text-truncate">
                             Rp {{ number_format($totalAsset, 0, ',', '.') }}
                         </h3>
-                        <div class="text-muted small text-truncate">Akumulasi modal stok faktur pembelian</div>
                     </div>
                 </div>
             </div>
@@ -99,7 +98,6 @@
                         <h3 class="fw-bold text-heading font-monospace mb-1 text-truncate">
                             {{ number_format($totalBarangFisik, $totalBarangFisik == (int)$totalBarangFisik ? 0 : 2, ',', '.') }} <span class="fs-6 fw-normal text-muted">Unit</span>
                         </h3>
-                        <div class="text-muted small text-truncate">Total unit fisik persediaan di seluruh outlet</div>
                     </div>
                 </div>
             </div>
@@ -117,7 +115,6 @@
                         <h3 class="fw-bold text-heading font-monospace mb-1 text-truncate">
                             {{ number_format($totalOutlet, 0, ',', '.') }} <span class="fs-6 fw-normal text-muted">Cabang</span>
                         </h3>
-                        <div class="text-muted small text-truncate">Toko cabang dengan persediaan stok aktif</div>
                     </div>
                 </div>
             </div>
@@ -182,7 +179,6 @@
                 <h5 class="card-title fw-bold text-heading mb-0">
                     <i class="bi bi-box-seam-fill text-emerald me-2"></i>Daftar Persediaan Stok Barang
                 </h5>
-                <p class="text-muted small mb-0">Kuantitas stok terakumulasi dari faktur masuk. Anda dapat melihat detail riwayat, mengedit/koreksi stok, serta menghapus data.</p>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-light text-dark border px-3 py-2 rounded-3 small">
@@ -198,12 +194,10 @@
                         <tr>
                             <th class="ps-4 text-muted small fw-bold" style="width: 50px;">NO</th>
                             <th class="text-muted small fw-bold" style="min-width: 200px;">NAMA BARANG</th>
-                            <th class="text-muted small fw-bold">NAMA OUTLET (CABANG)</th>
-                            <th class="text-muted small fw-bold">KATEGORI (MENU CAFE)</th>
+                            <th class="text-muted small fw-bold">NAMA OUTLET</th>
+                            <th class="text-muted small fw-bold">KATEGORI</th>
                             <th class="text-muted small fw-bold">SATUAN</th>
                             <th class="text-muted small fw-bold text-center">STOK DARI FAKTUR</th>
-                            <th class="text-muted small fw-bold text-end">NILAI ASET (MODAL)</th>
-                            <th class="text-muted small fw-bold text-end">HARGA JUAL KASIR</th>
                             <th class="text-end pe-4 text-muted small fw-bold" style="min-width: 210px;">AKSI</th>
                         </tr>
                     </thead>
@@ -215,13 +209,7 @@
                                 </td>
                                 <td>
                                     <div class="fw-bold text-dark d-flex align-items-center gap-2">
-                                        <div class="item-avatar-mini rounded-2 bg-light d-flex align-items-center justify-content-center text-emerald">
-                                            <i class="bi bi-box-seam"></i>
-                                        </div>
-                                        <span>{{ $item->nama_barang }}</span>
-                                    </div>
-                                    <div class="text-muted small ms-4 ps-2">
-                                        Terakhir masuk: {{ \Carbon\Carbon::parse($item->tanggal_terakhir)->isoFormat('D MMM Y') }}
+                                        {{ $item->nama_barang }}
                                     </div>
                                 </td>
                                 <td>
@@ -257,15 +245,6 @@
                                     <span class="badge bg-emerald-subtle text-emerald fs-6 px-3 py-1 rounded-3 fw-bold font-monospace border border-emerald">
                                         {{ $stokFormatted }} {{ $item->nama_satuan }}
                                     </span>
-                                </td>
-                                <td class="text-end font-monospace fw-bold text-emerald">
-                                    Rp {{ number_format($item->total_asset_item, 0, ',', '.') }}
-                                    <div class="text-muted small fw-normal" style="font-size: 0.72rem;">
-                                        Avg modal: Rp {{ number_format($item->avg_harga_awal, 0, ',', '.') }}
-                                    </div>
-                                </td>
-                                <td class="text-end font-monospace fw-semibold text-dark">
-                                    Rp {{ number_format($item->harga_jual_terakhir, 0, ',', '.') }}
                                 </td>
                                 <td class="text-end pe-4">
                                     <div class="d-inline-flex align-items-center gap-1">

@@ -833,17 +833,10 @@ background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary
                             <div class="collapse {{ request()->is('admin/cafe*') ? 'show' : '' }}" id="menuCafe">
                                 <ul class="sidebar-submenu">
                                     <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.cafe.menu') ? route('admin.cafe.menu') : url('/admin/cafe/menu') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/cafe/menu*') ? 'active' : '' }}">
-                                            <i class="bi bi-card-list"></i>
-                                            <span>List Menu Makanan/Minuman</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
                                         <a href="{{ Route::has('admin.cafe.stok') ? route('admin.cafe.stok') : url('/admin/cafe/stok') }}" 
                                            class="sidebar-submenu-link {{ request()->is('admin/cafe/stok*') ? 'active' : '' }}">
                                             <i class="bi bi-boxes"></i>
-                                            <span>Stok dan Koreksi Stok</span>
+                                            <span>Stok Barang</span>
                                         </a>
                                     </li>
                                     <li class="sidebar-submenu-item">
