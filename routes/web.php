@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FilmController;
+use App\Http\Controllers\Master\BarangController;
 use App\Http\Controllers\Master\GenreFilmController;
 use App\Http\Controllers\Master\HargaPerdurasiController;
 use App\Http\Controllers\Master\JabatanController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Master\JenisBiayaController;
 use App\Http\Controllers\Master\MenuCafeController;
 use App\Http\Controllers\Master\PromoController;
 use App\Http\Controllers\Master\RoomController;
+use App\Http\Controllers\Master\SatuanBarangController;
 use App\Http\Controllers\Master\TipePembayaranController;
 use App\Http\Controllers\Master\TokoCabangController;
 use Illuminate\Support\Facades\Route;
@@ -78,6 +80,14 @@ Route::middleware(['auth', 'role:admin'])
             // 9. Jabatan
             Route::get('jabatan', [JabatanController::class, 'index'])->name('jabatan');
             Route::resource('jabatan', JabatanController::class);
+
+            // 10. Satuan Barang
+            Route::get('satuan-barang', [SatuanBarangController::class, 'index'])->name('satuan-barang');
+            Route::resource('satuan-barang', SatuanBarangController::class);
+
+            // 11. Master Data Barang
+            Route::get('barang', [BarangController::class, 'index'])->name('barang');
+            Route::resource('barang', BarangController::class);
         });
     });
 

@@ -2,16 +2,19 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\TipePembayaran;
-use App\Models\HargaPerdurasi;
-use App\Models\TokoCabang;
-use App\Models\Room;
-use App\Models\Promo;
-use App\Models\MenuCafePerjenis;
+use App\Models\Barang;
 use App\Models\GenreFilm;
-use App\Models\JenisBiaya;
+use App\Models\HargaPerdurasi;
 use App\Models\Jabatan;
+use App\Models\JenisBiaya;
+use App\Models\MenuCafe;
+use App\Models\MenuCafePerjenis;
+use App\Models\Promo;
+use App\Models\Room;
+use App\Models\SatuanBarang;
+use App\Models\TipePembayaran;
+use App\Models\TokoCabang;
+use App\Models\User;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -44,10 +47,12 @@ class MasterDataTest extends TestCase
             'admin.master.toko-cabang.index',
             'admin.master.room.index',
             'admin.master.promo.index',
-            'admin.master.menu-cafe-perjenis.index',
+            'admin.master.menu-cafe.index',
             'admin.master.genre-film.index',
             'admin.master.jenis-biaya.index',
             'admin.master.jabatan.index',
+            'admin.master.satuan-barang.index',
+            'admin.master.barang.index',
         ];
 
         foreach ($routes as $route) {
@@ -265,5 +270,69 @@ class MasterDataTest extends TestCase
         $resp = $this->actingAs($admin)->post(route('admin.master.jabatan.store'), ['nama_jabatan' => 'Sound Engineer']);
         $resp->assertRedirect(route('admin.master.jabatan.index'));
         $this->assertDatabaseHas('jabatans', ['nama_jabatan' => 'Sound Engineer']);
+    }
+
+    public function test_satuan_barang_crud_operations(): void
+    {
+        $admin = $this->getAdmin();
+
+        // 1. Store
+        $resp = $this->actingAs($admin)->post(route('admin.master.satuan-barang.store'), [
+            'nama_satuan' => 'Slop',
+        ]);
+        $resp->assertRedirect(route('admin.master.satuan-barang.index'));
+        $this->assertDatabaseHas('satuan_barangs', ['nama_satuan' => 'Slop']);
+
+        $satuan = SatuanBarang::where('nama_satuan', 'Slop')->first();
+
+        // 2. Update
+        $resp = $this->actingAs($admin)->put(route('admin.master.satuan-barang.update', $satuan->id), [
+            'nama_satuan' => 'Slop Besar',
+        ]);
+        $resp->assertRedirect(route('admin.master.satuan-barang.index'));
+        $this->assertDatabaseHas('satuan_barangs', ['nama_satuan' => 'Slop Besar']);
+
+        // 3. Destroy
+        $resp = $this->actingAs($admin)->delete(route('admin.master.satuan-barang.destroy', $satuan->id));
+        $resp->assertRedirect(route('admin.master.satuan-barang.index'));
+        $this->assertDatabaseMissing('satuan_barangs', ['id' => $satuan->id]);
+    }
+
+    public function test_barang_crud_operations_and_devtools_tampering_protection(): void
+    {
+        $admin = $this->getAdmin();
+        $kategori = MenuCafe::create(['nama' => 'Kategori Barang Test']);
+
+        // 1. Store
+        $postData = [
+            'nama_barang' => 'Sirup Karamel Monin',
+            'menu_cafe_id' => $kategori->id,
+        ];
+        $resp = $this->actingAs($admin)->post(route('admin.master.barang.store'), $postData);
+        $resp->assertRedirect(route('admin.master.barang.index'));
+        $this->assertDatabaseHas('barangs', ['nama_barang' => 'Sirup Karamel Monin', 'menu_cafe_id' => $kategori->id]);
+
+        $barang = Barang::where('nama_barang', 'Sirup Karamel Monin')->first();
+
+        // 2. Update
+        $resp = $this->actingAs($admin)->put(route('admin.master.barang.update', $barang->id), [
+            'nama_barang' => 'Sirup Karamel Monin 750ml',
+            'menu_cafe_id' => $kategori->id,
+        ]);
+        $resp->assertRedirect(route('admin.master.barang.index'));
+        $this->assertDatabaseHas('barangs', ['nama_barang' => 'Sirup Karamel Monin 750ml']);
+
+        // 3. DevTools Tampering Protection (manipulated select option value in devtools inspect element)
+        $tamperedData = [
+            'nama_barang' => 'Barang Hacked Option',
+            'menu_cafe_id' => 999999,
+        ];
+        $respTampered = $this->actingAs($admin)->post(route('admin.master.barang.store'), $tamperedData);
+        $respTampered->assertSessionHasErrors('menu_cafe_id');
+
+        // 4. Destroy
+        $resp = $this->actingAs($admin)->delete(route('admin.master.barang.destroy', $barang->id));
+        $resp->assertRedirect(route('admin.master.barang.index'));
+        $this->assertDatabaseMissing('barangs', ['id' => $barang->id]);
     }
 }
