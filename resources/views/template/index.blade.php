@@ -571,7 +571,8 @@ background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary
             width: 34px;
             height: 34px;
             border-radius: 10px;
-background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);            color: #ffffff;
+            background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);            
+            color: #ffffff;
             font-weight: 700;
             font-size: 0.8rem;
             display: flex;
@@ -1103,17 +1104,10 @@ background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary
                             <div class="collapse {{ request()->is('admin/pengaturan*') ? 'show' : '' }}" id="menuPengaturan">
                                 <ul class="sidebar-submenu">
                                     <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.pengaturan.user') ? route('admin.pengaturan.user') : url('/admin/pengaturan/user') }}" 
+                                        <a href="{{ Route::has('admin.pengaturan.user.index') ? route('admin.pengaturan.user.index') : (Route::has('admin.pengaturan.user') ? route('admin.pengaturan.user') : url('/admin/pengaturan/user')) }}" 
                                            class="sidebar-submenu-link {{ request()->is('admin/pengaturan/user*') ? 'active' : '' }}">
                                             <i class="bi bi-person-gear"></i>
                                             <span>User</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.pengaturan.level') ? route('admin.pengaturan.level') : url('/admin/pengaturan/level') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/pengaturan/level*') ? 'active' : '' }}">
-                                            <i class="bi bi-shield-check"></i>
-                                            <span>Level</span>
                                         </a>
                                     </li>
                                     <li class="sidebar-submenu-item">
@@ -1234,35 +1228,7 @@ background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary
                                 <span class="user-nav-name">{{ $userName }}</span>
                                 <span class="user-nav-role">{{ $userRoleLabel }}</span>
                             </div>
-                            <i class="bi bi-chevron-down text-muted small ms-1"></i>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-2 mt-2" style="min-width: 200px;">
-                            <li class="px-3 py-2 border-bottom mb-1">
-                                <div class="fw-bold text-dark">{{ $userName }}</div>
-                                <div class="text-muted small">{{ $authUser->username ?? $userRole }} ({{ $userRoleLabel }})</div>
-                            </li>
-                            <li>
-                                <a class="dropdown-item rounded-3 py-2" href="#">
-                                    <i class="bi bi-person me-2 text-muted"></i> Profil Saya
-                                </a>
-                            </li>
-                            @if ($userRole === 'admin')
-                            <li>
-                                <a class="dropdown-item rounded-3 py-2" href="{{ route('kasir.index') }}">
-                                    <i class="bi bi-calculator me-2 text-muted"></i> Buka Menu Kasir
-                                </a>
-                            </li>
-                            @endif
-                            <li><hr class="dropdown-divider my-1"></li>
-                            <li>
-                                <form action="{{ route('logout') }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item rounded-3 py-2 text-danger">
-                                        <i class="bi bi-box-arrow-right me-2"></i> Keluar
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
+                        </a>                        
                     </div>
                 </div>
             </header>
