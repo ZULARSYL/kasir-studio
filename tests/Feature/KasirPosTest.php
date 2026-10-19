@@ -1,0 +1,344 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Barang;
+use App\Models\FakturBarang;
+use App\Models\FakturBarangDetail;
+use App\Models\Film;
+use App\Models\KasirShift;
+use App\Models\MenuCafe;
+use App\Models\Promo;
+use App\Models\Room;
+use App\Models\SatuanBarang;
+use App\Models\TipePembayaran;
+use App\Models\TokoCabang;
+use App\Models\Transaksi;
+use App\Models\User;
+use Database\Seeders\MasterDataSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
+
+class KasirPosTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function getKasir()
+    {
+        return User::firstOrCreate(
+            ['username' => 'kasir_pos_tester'],
+            [
+                'name' => 'Kasir POS Tester',
+                'password' => Hash::make('password123'),
+                'role' => 'kasir',
+            ]
+        );
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(MasterDataSeeder::class);
+    }
+
+    /**
+     * Test kasir yang belum membuka shift melihat tampilan input modal awal (hari pertama / belum buka).
+     */
+    public function test_kasir_without_active_shift_sees_modal_awal_opening_form(): void
+    {
+        $kasir = $this->getKasir();
+
+        $response = $this->actingAs($kasir)->get(route('kasir.kasir'));
+        $response->assertOk();
+        $response->assertSee('Buka Shift Kasir Hari Ini');
+        $response->assertSee('Nominal Modal Awal Kas (Rp)');
+        $response->assertSee('Pilih Outlet Cabang');
+        $response->assertSee('Buka Kasir & Mulai Transaksi', false);
+    }
+
+    /**
+     * Test kasir berhasil membuka shift dengan memasukkan modal awal dan memilih outlet.
+     */
+    public function test_kasir_can_open_shift_with_modal_awal(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+
+        $response = $this->actingAs($kasir)->post(route('kasir.shift.buka'), [
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 250000,
+            'catatan_buka' => 'Modal awal uang kembalian pecahan kecil',
+        ]);
+
+        $response->assertRedirect(route('kasir.kasir'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('kasir_shifts', [
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 250000,
+            'status' => 'buka',
+        ]);
+    }
+
+    /**
+     * Test kasir yang sudah membuka shift dapat melihat katalog film (movie.png), room studio, dan menu cafe.
+     */
+    public function test_kasir_with_active_shift_sees_movie_catalog_and_rooms(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+
+        // Buka shift terlebih dahulu
+        KasirShift::create([
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 200000,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+
+        // Buat film dan room untuk testing
+        $film = Film::create([
+            'judul' => 'Avatar Fire and Ash',
+            'durasi_menit' => 150,
+            'harga_per_menit' => 500,
+            'total_harga' => 75000,
+            'tahun_rilis' => 2026,
+            'usia_rating' => '13+',
+            'status' => 'tersedia',
+        ]);
+
+        $room = Room::create([
+            'toko_cabang_id' => $cabang->id,
+            'nama' => 'Studio Room Premiere 1',
+            'kapasitas' => 4,
+        ]);
+
+        $response = $this->actingAs($kasir)->get(route('kasir.kasir'));
+        $response->assertOk();
+
+        // Cek header shift aktif
+        $response->assertSee('Shift Aktif');
+        $response->assertSee($cabang->nama_cabang);
+
+        // Cek katalog film (sesuai movie.png)
+        $response->assertSee('STEP 1');
+        $response->assertSee('Pilih Film Studio');
+        $response->assertSee('Avatar Fire and Ash');
+
+        // Cek room studio
+        $response->assertSee('STEP 2');
+        $response->assertSee('Pilih Room Studio Tersedia');
+        $response->assertSee('Studio Room Premiere 1');
+
+        // Cek menu cafe
+        $response->assertSee('STEP 3');
+        $response->assertSee('Pesan Makanan & Minuman Cafe', false);
+
+        // Cek panel checkout
+        $response->assertSee('Metode Pembayaran (Data Master)');
+        $response->assertSee('Bayar & Cetak Struk', false);
+    }
+
+    /**
+     * Test validasi kode voucher promo pada menu kasir via AJAX.
+     */
+    public function test_kasir_can_check_promo_code(): void
+    {
+        $kasir = $this->getKasir();
+
+        $promo = Promo::create([
+            'kode_voucher' => 'DISC20K',
+            'nama_promo' => 'Diskon 20 Ribu',
+            'nilai' => 'Rp 20.000',
+            'periode_berlaku' => '2026-01-01 - 2026-12-31',
+            'status' => 'aktif',
+        ]);
+
+        $response = $this->actingAs($kasir)->postJson(route('kasir.cek-promo'), [
+            'kode_voucher' => 'DISC20K',
+            'subtotal' => 100000,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'promo_id' => $promo->id,
+            'diskon' => 20000,
+            'total_setelah_diskon' => 80000,
+        ]);
+    }
+
+    /**
+     * Test alur checkout lengkap: film + room + cafe + pembayaran dari master data + cetak struk.
+     */
+    public function test_kasir_can_checkout_transaction_and_view_receipt(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+        $metodeBayar = TipePembayaran::first();
+        $kategoriCafe = MenuCafe::first();
+        $satuanPcs = SatuanBarang::first();
+
+        // 1. Shift Aktif
+        $shift = KasirShift::create([
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 200000,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+
+        // 2. Film & Room
+        $film = Film::create([
+            'judul' => 'The Batman Part II',
+            'durasi_menit' => 120,
+            'harga_per_menit' => 500,
+            'total_harga' => 60000,
+            'status' => 'tersedia',
+        ]);
+
+        $room = Room::create([
+            'toko_cabang_id' => $cabang->id,
+            'nama' => 'Studio VIP 03',
+            'kapasitas' => 6,
+        ]);
+
+        // 3. Cafe Item dengan Stok dari Faktur Masuk
+        $barang = Barang::create([
+            'nama_barang' => 'Popcorn Caramel Jumbo',
+            'menu_cafe_id' => $kategoriCafe->id,
+        ]);
+
+        $faktur = FakturBarang::create([
+            'nomor_faktur' => 'FKT-KASIR-001',
+            'toko_cabang_id' => $cabang->id,
+            'tanggal_faktur' => '2026-10-19',
+            'total_nominal' => 200000,
+            'user_id' => $kasir->id,
+        ]);
+
+        $fakturDetail = FakturBarangDetail::create([
+            'faktur_barang_id' => $faktur->id,
+            'barang_id' => $barang->id,
+            'satuan_barang_id' => $satuanPcs->id,
+            'qty' => 10,
+            'harga_awal' => 15000,
+            'harga_jual' => 25000,
+            'subtotal' => 150000,
+        ]);
+
+        // 4. Lakukan Checkout Transaksi (Beli 2 Popcorn @ 25.000 = 50.000 + Film 60.000 = 110.000)
+        $checkoutData = [
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+            'nama_pelanggan' => 'Budi Santoso',
+            'uang_diterima' => 150000,
+            'cafe_items' => [
+                [
+                    'barang_id' => $barang->id,
+                    'satuan_barang_id' => $satuanPcs->id,
+                    'qty' => 2,
+                    'harga_satuan' => 25000,
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($kasir)->postJson(route('kasir.checkout'), $checkoutData);
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+        ]);
+
+        $transaksiId = $response->json('transaksi_id');
+
+        // Pastikan transaksi tersimpan dengan benar
+        $this->assertDatabaseHas('transaksis', [
+            'id' => $transaksiId,
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+            'subtotal_film_room' => 60000,
+            'subtotal_cafe' => 50000,
+            'total_bayar' => 110000,
+            'uang_diterima' => 150000,
+            'kembalian' => 40000,
+        ]);
+
+        // Pastikan detail cafe tersimpan
+        $this->assertDatabaseHas('transaksi_details', [
+            'transaksi_id' => $transaksiId,
+            'barang_id' => $barang->id,
+            'qty' => 2,
+            'harga_satuan' => 25000,
+            'subtotal' => 50000,
+        ]);
+
+        // Pastikan stok berkurang dari 10 menjadi 8
+        $this->assertDatabaseHas('faktur_barang_details', [
+            'id' => $fakturDetail->id,
+            'qty' => 8,
+        ]);
+
+        // Pastikan shift kasir terakumulasi
+        $this->assertDatabaseHas('kasir_shifts', [
+            'id' => $shift->id,
+            'total_penjualan' => 110000,
+            'total_transaksi' => 1,
+        ]);
+
+        // 5. Cetak Struk Transaksi
+        $strukResponse = $this->actingAs($kasir)->get(route('kasir.struk', $transaksiId));
+        $strukResponse->assertOk();
+        $strukResponse->assertSee('PRESSENT STUDIO & CAFE', false);
+        $strukResponse->assertSee('The Batman Part II');
+        $strukResponse->assertSee('Studio VIP 03');
+        $strukResponse->assertSee('Popcorn Caramel Jumbo');
+        $strukResponse->assertSee('Rp 110.000');
+        $strukResponse->assertSee('Rp 40.000'); // Kembalian
+    }
+
+    /**
+     * Test kasir dapat melakukan tutup toko / tutup shift.
+     */
+    public function test_kasir_can_close_shift_tutup_toko(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+
+        $shift = KasirShift::create([
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 200000,
+            'total_penjualan' => 500000,
+            'total_tunai' => 500000,
+            'total_transaksi' => 3,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+
+        $response = $this->actingAs($kasir)->post(route('kasir.shift.tutup'), [
+            'modal_akhir' => 700000, // 200k modal awal + 500k penjualan
+            'catatan_tutup' => 'Laci kasir cocok dan seimbang',
+        ]);
+
+        $response->assertRedirect(route('kasir.kasir'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('kasir_shifts', [
+            'id' => $shift->id,
+            'modal_akhir' => 700000,
+            'status' => 'tutup',
+        ]);
+
+        // Setelah tutup toko, jika kasir mengakses menu kasir lagi, muncul form input modal awal
+        $nextResponse = $this->actingAs($kasir)->get(route('kasir.kasir'));
+        $nextResponse->assertOk();
+        $nextResponse->assertSee('Buka Shift Kasir Hari Ini');
+    }
+}

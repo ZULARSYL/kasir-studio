@@ -14,7 +14,7 @@
                     <li class="breadcrumb-item active text-emerald fw-semibold" aria-current="page">Stok & Koreksi Stok</li>
                 </ol>
             </nav>
-            <h3 class="fw-bold mb-0 text-heading">Stok Barang</h3>
+            <h3 class="fw-bold mb-0 text-heading">Stok Barang Cafe (Inventaris Outlet)</h3>
             <p class="text-muted small mb-0">Monitoring stok barang per outlet cabang, kategori menu cafe, satuan, dan akumulasi nilai aset yang bersumber dari faktur barang.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
