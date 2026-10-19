@@ -1066,7 +1066,14 @@ background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary
                             <div class="collapse {{ request()->is('admin/kepegawaian*') ? 'show' : '' }}" id="menuKepegawaian">
                                 <ul class="sidebar-submenu">
                                     <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.kepegawaian.pegawai') ? route('admin.kepegawaian.pegawai') : url('/admin/kepegawaian/pegawai') }}" 
+                                        <a href="{{ Route::has('admin.kepegawaian.jabatan.index') ? route('admin.kepegawaian.jabatan.index') : (Route::has('admin.kepegawaian.jabatan') ? route('admin.kepegawaian.jabatan') : url('/admin/kepegawaian/jabatan')) }}" 
+                                           class="sidebar-submenu-link {{ request()->is('admin/kepegawaian/jabatan*') ? 'active' : '' }}">
+                                            <i class="bi bi-person-badge"></i>
+                                            <span>Jabatan</span>
+                                        </a>
+                                    </li>
+                                    <li class="sidebar-submenu-item">
+                                        <a href="{{ Route::has('admin.kepegawaian.pegawai.index') ? route('admin.kepegawaian.pegawai.index') : (Route::has('admin.kepegawaian.pegawai') ? route('admin.kepegawaian.pegawai') : url('/admin/kepegawaian/pegawai')) }}" 
                                            class="sidebar-submenu-link {{ request()->is('admin/kepegawaian/pegawai*') ? 'active' : '' }}">
                                             <i class="bi bi-person-lines-fill"></i>
                                             <span>Pegawai</span>

@@ -102,6 +102,19 @@ Route::middleware(['auth', 'role:admin'])
             Route::get('barang', [BarangController::class, 'index'])->name('barang');
             Route::resource('barang', BarangController::class);
         });
+
+        // Kepegawaian (Jabatan & Pegawai)
+        Route::prefix('kepegawaian')->name('kepegawaian.')->group(function () {
+            // Submenu 1: Jabatan
+            Route::get('jabatan', [\App\Http\Controllers\Kepegawaian\JabatanController::class, 'index'])->name('jabatan.index');
+            Route::resource('jabatan', \App\Http\Controllers\Kepegawaian\JabatanController::class)->except(['index', 'create', 'show', 'edit']);
+            Route::get('jabatan/list', [\App\Http\Controllers\Kepegawaian\JabatanController::class, 'index'])->name('jabatan');
+
+            // Submenu 2: Pegawai
+            Route::get('pegawai', [\App\Http\Controllers\Kepegawaian\PegawaiController::class, 'index'])->name('pegawai.index');
+            Route::resource('pegawai', \App\Http\Controllers\Kepegawaian\PegawaiController::class)->except(['index', 'create', 'show', 'edit']);
+            Route::get('pegawai/list', [\App\Http\Controllers\Kepegawaian\PegawaiController::class, 'index'])->name('pegawai');
+        });
     });
 
 Route::middleware(['auth', 'role:kasir'])
