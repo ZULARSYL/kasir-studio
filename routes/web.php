@@ -123,6 +123,24 @@ Route::middleware(['auth', 'role:admin'])
             Route::resource('user', \App\Http\Controllers\Pengaturan\UserController::class)->except(['index', 'create', 'show', 'edit']);
             Route::get('user/list', [\App\Http\Controllers\Pengaturan\UserController::class, 'index'])->name('user');
         });
+
+        // Laporan (Penjualan Shift, Riwayat Penjualan Harian, Pembelian Faktur)
+        Route::prefix('laporan')->name('laporan.')->group(function () {
+            // 1. Laporan Penjualan (Shift Tutup Kasir)
+            Route::get('penjualan', [\App\Http\Controllers\Laporan\LaporanPenjualanController::class, 'index'])->name('penjualan');
+            Route::get('penjualan/export', [\App\Http\Controllers\Laporan\LaporanPenjualanController::class, 'export'])->name('penjualan.export');
+            Route::get('penjualan/shift/{id}', [\App\Http\Controllers\Laporan\LaporanPenjualanController::class, 'detailShift'])->name('penjualan.shift-detail');
+
+            // 2. Riwayat Penjualan (Transaksi Harian)
+            Route::get('riwayat', [\App\Http\Controllers\Laporan\RiwayatPenjualanController::class, 'index'])->name('riwayat');
+            Route::get('riwayat/export', [\App\Http\Controllers\Laporan\RiwayatPenjualanController::class, 'export'])->name('riwayat.export');
+            Route::get('riwayat/detail/{id}', [\App\Http\Controllers\Laporan\RiwayatPenjualanController::class, 'detailTransaksi'])->name('riwayat.detail');
+
+            // 3. Laporan Pembelian (Faktur Barang)
+            Route::get('pembelian', [\App\Http\Controllers\Laporan\LaporanPembelianController::class, 'index'])->name('pembelian');
+            Route::get('pembelian/export', [\App\Http\Controllers\Laporan\LaporanPembelianController::class, 'export'])->name('pembelian.export');
+            Route::get('pembelian/faktur/{id}', [\App\Http\Controllers\Laporan\LaporanPembelianController::class, 'detailFaktur'])->name('pembelian.faktur-detail');
+        });
     });
 
 Route::middleware(['auth', 'role:kasir'])

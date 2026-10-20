@@ -53,7 +53,7 @@
                     <li class="breadcrumb-item active text-emerald fw-semibold" aria-current="page">User</li>
                 </ol>
             </nav>
-            <h3 class="fw-bold mb-0 text-heading">User</h3>
+            <h3 class="fw-bold mb-0 text-heading">Submenu Pengaturan User</h3>
             <p class="text-muted small mb-0">Kelola akun login sistem, penempatan outlet cabang, relasi staf pegawai, dan jabatan.</p>
         </div>
         <div>
