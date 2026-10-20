@@ -38,7 +38,7 @@ class AuthController extends Controller
             $request->session()->regenerate();
             $user = Auth::user();
 
-            $message = 'Selamat datang kembali, ' . $user->name . '! Anda berhasil masuk ke Portal PMB.';
+            $message = 'Selamat datang kembali, ' . $user->name . '! Anda berhasil masuk ke Sistem.';
 
             return redirect()->intended(route($this->dashboardRouteName($user->role)))
                 ->with('success', $message);

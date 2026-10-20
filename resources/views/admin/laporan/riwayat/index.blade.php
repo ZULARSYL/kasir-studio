@@ -16,10 +16,10 @@
                 </ol>
             </nav>
             <h3 class="fw-bold mb-0 text-heading">Riwayat Transaksi Penjualan</h3>
-            <p class="text-muted small mb-0">Daftar transaksi harian kasir per pelanggan, studio film, dan pesanan cafe yang dapat difilter harian dan diexport ke Excel.</p>
+            <p class="text-muted small mb-0">Daftar transaksi harian kasir.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <a href="{{ route('admin.laporan.riwayat.export', request()->query()) }}" class="btn btn-emerald px-3 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2" target="_blank">
+            <a href="{{ route('admin.laporan.riwayat.export', request()->query()) }}" class="btn btn-success px-3 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2" target="_blank">
                 <i class="bi bi-file-earmark-excel-fill"></i>
                 <span class="fw-semibold">Export Excel (.xls)</span>
             </a>
@@ -30,9 +30,9 @@
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.laporan.riwayat') }}">
-                <div class="row g-3 align-items-end">
+                <div class="row g-3">
                     <!-- Filter Tanggal (Perhari) -->
-                    <div class="col-12 col-md-4 col-lg-3">
+                    <div class="col-12 col-md-4">
                         <label class="form-label small fw-semibold text-muted mb-1">
                             <i class="bi bi-calendar-event me-1 text-emerald"></i> Pilih Tanggal (Harian)
                         </label>
@@ -40,12 +40,12 @@
                     </div>
 
                     <!-- Filter Toko Cabang -->
-                    <div class="col-12 col-md-4 col-lg-3">
+                    <div class="col-12 col-md-4">
                         <label class="form-label small fw-semibold text-muted mb-1">
                             <i class="bi bi-shop me-1 text-emerald"></i> Toko Cabang
                         </label>
                         <select name="toko_cabang_id" class="form-select rounded-3">
-                            <option value="all" {{ $selectedCabang === 'all' ? 'selected' : '' }}>-- Semua Outlet --</option>
+                            <option value="all" {{ $selectedCabang === 'all' ? 'selected' : '' }}>Semua Outlet</option>
                             @foreach($tokoCabangs as $cabang)
                                 <option value="{{ $cabang->id }}" {{ (string)$selectedCabang === (string)$cabang->id ? 'selected' : '' }}>
                                     {{ $cabang->nama_cabang }}
@@ -55,23 +55,28 @@
                     </div>
 
                     <!-- Pencarian No Transaksi / Pelanggan -->
-                    <div class="col-12 col-md-4 col-lg-3">
+                    <div class="col-12 col-md-4">
                         <label class="form-label small fw-semibold text-muted mb-1">
                             <i class="bi bi-search me-1 text-emerald"></i> Cari Transaksi / Pelanggan
                         </label>
                         <input type="text" name="search" class="form-control rounded-3" placeholder="No. TRX atau Nama Pelanggan..." value="{{ $search }}">
                     </div>
 
-                    <!-- Tombol Terapkan & Reset -->
-                    <div class="col-12 col-lg-auto ms-lg-auto d-flex gap-2">
-                        <button type="submit" class="btn btn-primary px-3 rounded-3 shadow-sm d-flex align-items-center gap-2">
-                            <i class="bi bi-funnel-fill"></i>
-                            <span>Terapkan</span>
-                        </button>
-                        <a href="{{ route('admin.laporan.riwayat') }}" class="btn btn-outline-secondary px-3 rounded-3 shadow-sm d-flex align-items-center gap-2" title="Reset Filter">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                            <span>Reset</span>
-                        </a>
+                    <!-- Tombol Terapkan & Reset (di bawah) -->
+                    <div class="col-12">
+                        <div class="d-flex flex-column flex-sm-row justify-content-sm-start gap-2 pt-2">
+                            <button type="submit"
+                                    class="btn btn-primary px-4 rounded-3 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-funnel-fill"></i>
+                                <span>Terapkan</span>
+                            </button>
+                            <a href="{{ route('admin.laporan.riwayat') }}"
+                               class="btn btn-outline-secondary px-4 rounded-3 d-flex align-items-center justify-content-center gap-2"
+                               title="Reset Filter">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                                <span>Reset</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -85,14 +90,11 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-emerald-subtle text-emerald rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-cash-coin fs-3"></i>
-                        </div>
                         <div class="overflow-hidden">
-                            <div class="text-muted small fw-semibold text-uppercase tracking-wider">Total Penjualan</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-emerald text-truncate">
+                            <div class="text-muted fw-bold text-uppercase tracking-wider">Total Penjualan</div>
+                            <h6 class="fw-bold text-heading font-monospace mb-0 text-emerald text-truncate">
                                 Rp {{ number_format($totalOmset, 0, ',', '.') }}
-                            </h4>
+                            </h6>
                         </div>
                     </div>
                 </div>
@@ -104,14 +106,11 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-receipt-cutoff fs-3"></i>
-                        </div>
                         <div class="overflow-hidden">
-                            <div class="text-muted small fw-semibold text-uppercase tracking-wider">Jumlah Transaksi</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-truncate">
-                                {{ number_format($totalTransaksi, 0, ',', '.') }} <span class="fs-6 fw-normal text-muted">Trx</span>
-                            </h4>
+                            <div class="text-muted fw-bold text-uppercase tracking-wider">Jumlah Transaksi</div>
+                            <h6 class="fw-bold text-heading font-monospace mb-0 text-truncate">
+                                {{ number_format($totalTransaksi, 0, ',', '.') }}
+                            </h6>
                         </div>
                     </div>
                 </div>
@@ -123,14 +122,11 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-info-subtle text-info rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-film fs-3"></i>
-                        </div>
                         <div class="overflow-hidden">
-                            <div class="text-muted small fw-semibold text-uppercase tracking-wider">Tiket Studio</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-truncate">
+                            <div class="text-muted fw-bold text-uppercase tracking-wider">Tiket Studio</div>
+                            <h6 class="fw-bold text-heading font-monospace mb-0 text-truncate">
                                 Rp {{ number_format($totalTiketStudio, 0, ',', '.') }}
-                            </h4>
+                            </h6>
                         </div>
                     </div>
                 </div>
@@ -142,33 +138,11 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-warning-subtle text-warning rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-cup-hot-fill fs-3"></i>
-                        </div>
                         <div class="overflow-hidden">
-                            <div class="text-muted small fw-semibold text-uppercase tracking-wider">Menu Cafe</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-truncate">
+                            <div class="text-muted fw-bold text-uppercase tracking-wider">Menu Cafe</div>
+                            <h6 class="fw-bold text-heading font-monospace mb-0 text-truncate">
                                 Rp {{ number_format($totalCafe, 0, ',', '.') }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Diskon -->
-        <div class="col">
-            <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
-                <div class="card-body p-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-danger-subtle text-danger rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-tag-fill fs-3"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <div class="text-muted small fw-semibold text-uppercase tracking-wider">Total Diskon</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-truncate text-danger">
-                                Rp {{ number_format($totalDiskon, 0, ',', '.') }}
-                            </h4>
+                            </h6>
                         </div>
                     </div>
                 </div>
@@ -182,7 +156,7 @@
             <h5 class="fw-bold mb-0 text-heading">
                 <i class="bi bi-journal-text me-2 text-emerald"></i> Transaksi Tanggal: {{ \Carbon\Carbon::parse($tanggal)->translatedFormat('d F Y') }}
             </h5>
-            <span class="badge bg-light text-muted fw-semibold">
+            <span class="badge bg-success text-white fw-semibold">
                 {{ $transaksis->total() }} Transaksi
             </span>
         </div>
@@ -193,10 +167,9 @@
                         <th class="ps-4" style="width: 50px;">No</th>
                         <th>No. Transaksi</th>
                         <th>Jam</th>
-                        <th>Outlet Cabang</th>
+                        <th>Outlet</th>
                         <th>Kasir</th>
-                        <th>Pelanggan</th>
-                        <th>Studio & Film</th>
+                        <th>Film</th>
                         <th>Menu Cafe</th>
                         <th>Metode Bayar</th>
                         <th class="text-end">Total Bayar</th>
@@ -220,15 +193,9 @@
                                 <div class="small fw-semibold">{{ $trx->user->name ?? $trx->user->username ?? '-' }}</div>
                             </td>
                             <td>
-                                <div class="fw-semibold text-heading">{{ $trx->nama_pelanggan ?: 'Umum' }}</div>
-                            </td>
-                            <td>
                                 @if($trx->film)
                                     <div class="fw-semibold small text-truncate" style="max-width: 180px;" title="{{ $trx->film->judul }}">
                                         {{ $trx->film->judul }}
-                                    </div>
-                                    <div class="small text-muted">
-                                        <i class="bi bi-door-closed me-1"></i>{{ $trx->room->nama_room ?? 'Studio' }} ({{ $trx->durasi_menit }} mnt)
                                     </div>
                                 @else
                                     <span class="text-muted small">- Hanya Cafe -</span>
@@ -237,7 +204,7 @@
                             <td>
                                 @if($trx->details && $trx->details->count() > 0)
                                     <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 small">
-                                        {{ $trx->details->count() }} Item Cafe
+                                        {{ $trx->details->count() }} Item
                                     </span>
                                 @else
                                     <span class="text-muted small">-</span>

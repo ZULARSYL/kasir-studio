@@ -15,11 +15,11 @@
                     <li class="breadcrumb-item active text-emerald fw-semibold" aria-current="page">Laporan Penjualan</li>
                 </ol>
             </nav>
-            <h3 class="fw-bold mb-0 text-heading">Laporan Penjualan (Rekap Tutup Kasir)</h3>
+            <h3 class="fw-bold mb-0 text-heading">Laporan Penjualan</h3>
             <p class="text-muted small mb-0">Laporan akumulasi penjualan saat kasir melakukan tutup toko/shift per cabang atau seluruh outlet.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <a href="{{ route('admin.laporan.penjualan.export', request()->query()) }}" class="btn btn-emerald px-3 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2" target="_blank">
+            <a href="{{ route('admin.laporan.penjualan.export', request()->query()) }}" class="btn btn-success px-3 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2" target="_blank">
                 <i class="bi bi-file-earmark-excel-fill"></i>
                 <span class="fw-semibold">Export Excel (.xls)</span>
             </a>
@@ -37,7 +37,7 @@
                             <i class="bi bi-shop me-1 text-emerald"></i> Toko Cabang
                         </label>
                         <select name="toko_cabang_id" class="form-select rounded-3">
-                            <option value="all" {{ $selectedCabang === 'all' ? 'selected' : '' }}>-- Semua Outlet --</option>
+                            <option value="all" {{ $selectedCabang === 'all' ? 'selected' : '' }}>Semua Outlet</option>
                             @foreach($tokoCabangs as $cabang)
                                 <option value="{{ $cabang->id }}" {{ (string)$selectedCabang === (string)$cabang->id ? 'selected' : '' }}>
                                     {{ $cabang->nama_cabang }}
@@ -99,15 +99,20 @@
                     </div>
 
                     <!-- Tombol Filter & Reset -->
-                    <div class="col-12 col-lg-auto ms-lg-auto d-flex gap-2">
-                        <button type="submit" class="btn btn-primary px-3 rounded-3 shadow-sm d-flex align-items-center gap-2">
-                            <i class="bi bi-funnel-fill"></i>
-                            <span>Terapkan</span>
-                        </button>
-                        <a href="{{ route('admin.laporan.penjualan') }}" class="btn btn-outline-secondary px-3 rounded-3 shadow-sm d-flex align-items-center gap-2" title="Reset Filter">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                            <span>Reset</span>
-                        </a>
+                    <div class="col-12">
+                        <div class="d-flex flex-column flex-sm-row justify-content-sm-start gap-2 pt-2">
+                            <button type="submit"
+                                    class="btn btn-primary px-4 rounded-3 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-funnel-fill"></i>
+                                <span>Terapkan</span>
+                            </button>
+                            <a href="{{ route('admin.laporan.penjualan') }}"
+                               class="btn btn-outline-secondary px-4 rounded-3 d-flex align-items-center justify-content-center gap-2"
+                               title="Reset Filter">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                                <span>Reset</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -121,14 +126,11 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-emerald-subtle text-emerald rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-cash-stack fs-3"></i>
-                        </div>
                         <div class="overflow-hidden">
-                            <div class="text-muted small fw-semibold text-uppercase tracking-wider">Total Omset</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-emerald text-truncate">
+                            <div class="text-muted small fw-semibold text-uppercase tracking-wider">Omset</div>
+                            <p class="fw-bold text-heading font-monospace mb-0 text-emerald text-truncate">
                                 Rp {{ number_format($totalOmset, 0, ',', '.') }}
-                            </h4>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -140,14 +142,11 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-receipt fs-3"></i>
-                        </div>
                         <div class="overflow-hidden">
                             <div class="text-muted small fw-semibold text-uppercase tracking-wider">Total Transaksi</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-truncate">
+                            <p class="fw-bold text-heading font-monospace mb-0 text-truncate">
                                 {{ number_format($totalTransaksi, 0, ',', '.') }} <span class="fs-6 fw-normal text-muted">Trx</span>
-                            </h4>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -159,14 +158,11 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-success-subtle text-success rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-wallet2 fs-3"></i>
-                        </div>
                         <div class="overflow-hidden">
                             <div class="text-muted small fw-semibold text-uppercase tracking-wider">Total Tunai</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-truncate">
+                            <p class="fw-bold text-heading font-monospace mb-0 text-truncate">
                                 Rp {{ number_format($totalTunai, 0, ',', '.') }}
-                            </h4>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -178,14 +174,11 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-info-subtle text-info rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-credit-card-2-front fs-3"></i>
-                        </div>
                         <div class="overflow-hidden">
                             <div class="text-muted small fw-semibold text-uppercase tracking-wider">Total Non-Tunai</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-truncate">
+                            <p class="fw-bold text-heading font-monospace mb-0 text-truncate">
                                 Rp {{ number_format($totalNonTunai, 0, ',', '.') }}
-                            </h4>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -197,14 +190,11 @@
             <div class="card border-0 shadow-sm rounded-4 h-100 card-stat">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="stat-icon-wrapper bg-warning-subtle text-warning rounded-4 d-flex align-items-center justify-content-center p-3">
-                            <i class="bi bi-door-closed fs-3"></i>
-                        </div>
                         <div class="overflow-hidden">
                             <div class="text-muted small fw-semibold text-uppercase tracking-wider">Shift Selesai</div>
-                            <h4 class="fw-bold text-heading font-monospace mb-0 text-truncate">
+                            <p class="fw-bold text-heading font-monospace mb-0 text-truncate">
                                 {{ number_format($totalShift, 0, ',', '.') }} <span class="fs-6 fw-normal text-muted">Shift</span>
-                            </h4>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -218,7 +208,7 @@
             <h5 class="fw-bold mb-0 text-heading">
                 <i class="bi bi-clock-history me-2 text-emerald"></i> Rekapitulasi Shift Kasir
             </h5>
-            <span class="badge bg-light text-muted fw-semibold">
+            <span class="badge bg-success text-white fw-semibold">
                 Menampilkan {{ $shifts->total() }} Data Shift Tutup
             </span>
         </div>
@@ -227,16 +217,11 @@
                 <thead class="table-light text-muted small text-uppercase">
                     <tr>
                         <th class="ps-4" style="width: 50px;">No</th>
-                        <th>Outlet Cabang</th>
+                        <th>Outlet</th>
                         <th>Nama Kasir</th>
-                        <th>Waktu Buka / Tutup</th>
-                        <th class="text-end">Modal Awal</th>
                         <th class="text-end">Penjualan</th>
                         <th class="text-end">Tunai</th>
                         <th class="text-end">Non-Tunai</th>
-                        <th class="text-end">Modal Akhir</th>
-                        <th class="text-end">Selisih Kas</th>
-                        <th class="text-center">Trx</th>
                         <th class="text-center pe-4" style="width: 100px;">Aksi</th>
                     </tr>
                 </thead>
@@ -253,33 +238,10 @@
                             </td>
                             <td>
                                 <div class="fw-semibold">{{ $shift->user->name ?? $shift->user->username ?? '-' }}</div>
-                                <small class="text-muted font-monospace">@ {{ $shift->user->username ?? '-' }}</small>
                             </td>
-                            <td>
-                                <div class="small">
-                                    <span class="text-success"><i class="bi bi-box-arrow-in-right"></i> {{ $shift->waktu_buka ? $shift->waktu_buka->format('d/m/Y H:i') : '-' }}</span>
-                                </div>
-                                <div class="small">
-                                    <span class="text-danger"><i class="bi bi-box-arrow-right"></i> {{ $shift->waktu_tutup ? $shift->waktu_tutup->format('d/m/Y H:i') : '-' }}</span>
-                                </div>
-                            </td>
-                            <td class="text-end font-monospace small">Rp {{ number_format($shift->modal_awal, 0, ',', '.') }}</td>
                             <td class="text-end font-monospace fw-bold text-emerald">Rp {{ number_format($shift->total_penjualan, 0, ',', '.') }}</td>
                             <td class="text-end font-monospace small">Rp {{ number_format($shift->total_tunai, 0, ',', '.') }}</td>
                             <td class="text-end font-monospace small">Rp {{ number_format($shift->total_non_tunai, 0, ',', '.') }}</td>
-                            <td class="text-end font-monospace small fw-semibold">Rp {{ number_format($shift->modal_akhir, 0, ',', '.') }}</td>
-                            <td class="text-end font-monospace small">
-                                @if($selisih == 0)
-                                    <span class="badge bg-success-subtle text-success">Pas (Rp 0)</span>
-                                @elseif($selisih > 0)
-                                    <span class="badge bg-info-subtle text-info">+Rp {{ number_format($selisih, 0, ',', '.') }}</span>
-                                @else
-                                    <span class="badge bg-danger-subtle text-danger">-Rp {{ number_format(abs($selisih), 0, ',', '.') }}</span>
-                                @endif
-                            </td>
-                            <td class="text-center font-monospace">
-                                <span class="badge bg-light text-dark">{{ $shift->total_transaksi }}</span>
-                            </td>
                             <td class="text-center pe-4">
                                 <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 shadow-sm" onclick="showDetailShift({{ $shift->id }})">
                                     <i class="bi bi-eye-fill me-1"></i> Detail

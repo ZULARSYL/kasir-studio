@@ -352,7 +352,8 @@
             width: 40px;
             height: 40px;
             border-radius: 12px;
-background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);     color: #ffffff;
+            background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+            color: #ffffff;
             font-weight: 700;
             font-size: 0.9rem;
             display: flex;
@@ -621,6 +622,20 @@ background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary
         .sidebar-backdrop.show {
             display: block;
             opacity: 1;
+        }
+
+        /* btn-brand: Custom Bootstrap Button for Brand Primary Color */
+        .btn-brand {
+            --bs-btn-color: #fff;
+            --bs-btn-bg: var(--brand-primary);
+            --bs-btn-border-color: var(--brand-primary);
+            --bs-btn-hover-color: var(--brand-primary-dark);
+            --bs-btn-hover-bg: var(--brand-primary-hover);
+            --bs-btn-hover-border-color: var(--brand-primary-hover);
+            --bs-btn-active-color: #fff;
+            --bs-btn-active-bg: var(--brand-primary-active);
+            --bs-btn-active-border-color: var(--brand-primary-active);
+            --bs-btn-focus-shadow-rgb: 0, 123, 139;
         }
 
         /* ----------------------------------------------------
