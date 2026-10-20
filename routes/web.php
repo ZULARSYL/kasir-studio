@@ -140,6 +140,23 @@ Route::middleware(['auth', 'role:admin'])
             Route::get('pembelian', [\App\Http\Controllers\Laporan\LaporanPembelianController::class, 'index'])->name('pembelian');
             Route::get('pembelian/export', [\App\Http\Controllers\Laporan\LaporanPembelianController::class, 'export'])->name('pembelian.export');
             Route::get('pembelian/faktur/{id}', [\App\Http\Controllers\Laporan\LaporanPembelianController::class, 'detailFaktur'])->name('pembelian.faktur-detail');
+
+            // 4. Laporan Laba & Rugi
+            Route::get('laba-rugi', [\App\Http\Controllers\Laporan\LaporanLabaRugiController::class, 'index'])->name('laba-rugi');
+            Route::get('laba-rugi/export', [\App\Http\Controllers\Laporan\LaporanLabaRugiController::class, 'export'])->name('laba-rugi.export');
+        });
+
+        // Keuangan (Pemasukan & Pengeluaran)
+        Route::prefix('keuangan')->name('keuangan.')->group(function () {
+            // Pemasukan Manual
+            Route::resource('pemasukan', \App\Http\Controllers\Keuangan\PemasukanController::class)->except(['create', 'show', 'edit']);
+            Route::get('pemasukan', [\App\Http\Controllers\Keuangan\PemasukanController::class, 'index'])->name('pemasukan');
+            Route::get('pemasukan/list', [\App\Http\Controllers\Keuangan\PemasukanController::class, 'index'])->name('pemasukan.index');
+
+            // Pengeluaran Operasional
+            Route::resource('pengeluaran', \App\Http\Controllers\Keuangan\PengeluaranController::class)->except(['create', 'show', 'edit']);
+            Route::get('pengeluaran', [\App\Http\Controllers\Keuangan\PengeluaranController::class, 'index'])->name('pengeluaran');
+            Route::get('pengeluaran/list', [\App\Http\Controllers\Keuangan\PengeluaranController::class, 'index'])->name('pengeluaran.index');
         });
 
         // Keuangan (Pemasukan & Pengeluaran)
