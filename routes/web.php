@@ -144,6 +144,10 @@ Route::middleware(['auth', 'role:admin'])
             // 4. Laporan Laba & Rugi
             Route::get('laba-rugi', [\App\Http\Controllers\Laporan\LaporanLabaRugiController::class, 'index'])->name('laba-rugi');
             Route::get('laba-rugi/export', [\App\Http\Controllers\Laporan\LaporanLabaRugiController::class, 'export'])->name('laba-rugi.export');
+
+            // 5. Laporan Stok Barang
+            Route::get('stok', [\App\Http\Controllers\Laporan\LaporanStokController::class, 'index'])->name('stok');
+            Route::get('stok/export', [\App\Http\Controllers\Laporan\LaporanStokController::class, 'export'])->name('stok.export');
         });
 
         // Keuangan (Pemasukan & Pengeluaran)
