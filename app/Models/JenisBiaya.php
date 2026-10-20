@@ -14,4 +14,14 @@ class JenisBiaya extends Model
     protected $fillable = [
         'kategori',
     ];
+
+    public function pemasukans()
+    {
+        return $this->hasMany(Pemasukan::class, 'jenis_biaya_id');
+    }
+
+    public function pengeluarans()
+    {
+        return $this->hasMany(Pengeluaran::class, 'jenis_biaya_id');
+    }
 }
