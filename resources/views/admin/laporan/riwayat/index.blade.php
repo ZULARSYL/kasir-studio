@@ -191,6 +191,7 @@
                             </td>
                             <td>
                                 <div class="small fw-semibold">{{ $trx->user->name ?? $trx->user->username ?? '-' }}</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Pelanggan: {{ $trx->nama_pelanggan }}</div>
                             </td>
                             <td>
                                 @if($trx->film)
