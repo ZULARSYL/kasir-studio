@@ -1051,6 +1051,13 @@
                                             <span>Laporan Stok</span>
                                         </a>
                                     </li>
+                                     <li class="sidebar-submenu-item">
+                                        <a href="{{ Route::has('admin.laporan.laba-rugi') ? route('admin.laporan.laba-rugi') : url('/admin/laporan/laba-rugi') }}" 
+                                           class="sidebar-submenu-link {{ request()->is('admin/laporan/laba-rugi*') ? 'active' : '' }}">
+                                            <i class="bi bi-cash-stack"></i>
+                                            <span>Laporan Laba Rugi</span>
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </li>

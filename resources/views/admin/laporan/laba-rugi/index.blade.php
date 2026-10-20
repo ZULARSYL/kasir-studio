@@ -205,7 +205,7 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                 <div>
                     <h5 class="fw-bold text-heading mb-1">
-                        <i class="bi bi-file-earmark-spreadsheet-fill text-emerald me-2"></i>Laporan Laba &amp; Rugi Komprehensif
+                        <i class="bi bi-file-earmark-spreadsheet-fill text-emerald me-2"></i>Laporan Laba &amp; Rugi
                     </h5>
                     <div class="text-muted small d-flex flex-wrap align-items-center gap-3">
                         <span><i class="bi bi-geo-alt-fill text-danger me-1"></i><strong>Outlet:</strong> {{ $namaCabang }}</span>
