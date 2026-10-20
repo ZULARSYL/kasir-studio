@@ -145,11 +145,13 @@ class MasterDataSeeder extends Seeder
 
         // 8. Master Jenis Biaya (hanya kategori)
         $biayas = [
+            ['kategori' => 'Gaji Karyawan'],
+            ['kategori' => 'Listrik dan Air'],
+            ['kategori' => 'Internet'],
+            ['kategori' => 'Sewa Gedung'],
             ['kategori' => 'Operasional'],
             ['kategori' => 'Bahan Baku'],
-            ['kategori' => 'Gaji & SDM'],
             ['kategori' => 'Maintenance'],
-            ['kategori' => 'Sewa Gedung'],
         ];
         foreach ($biayas as $item) {
             JenisBiaya::firstOrCreate(['kategori' => $item['kategori']], $item);
