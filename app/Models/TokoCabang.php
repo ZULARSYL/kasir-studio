@@ -22,4 +22,14 @@ class TokoCabang extends Model
     {
         return $this->hasMany(Room::class, 'toko_cabang_id');
     }
+
+    public function pemasukans(): HasMany
+    {
+        return $this->hasMany(Pemasukan::class, 'toko_cabang_id');
+    }
+
+    public function pengeluarans(): HasMany
+    {
+        return $this->hasMany(Pengeluaran::class, 'toko_cabang_id');
+    }
 }

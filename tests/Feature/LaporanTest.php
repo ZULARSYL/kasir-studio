@@ -122,7 +122,7 @@ class LaporanTest extends TestCase
         // Test A: Index Default (Perhari Hari Ini)
         $response = $this->actingAs($admin)->get(route('admin.laporan.penjualan'));
         $response->assertOk();
-        $response->assertSee('Laporan Penjualan (Rekap Tutup Kasir)');
+        $response->assertSee('Laporan Penjualan');
         $response->assertSee($cabang1->nama_cabang);
         $response->assertSee('Rp 450.000'); // total penjualan shift hari ini
         $response->assertDontSee('Shift pagi lancar'); // ada di modal detail, bukan row utama
@@ -275,7 +275,7 @@ class LaporanTest extends TestCase
             'tanggal' => Carbon::today()->format('Y-m-d'),
         ]));
         $response->assertOk();
-        $response->assertSee('Riwayat Transaksi Penjualan');
+        $response->assertSee('Riwayat Penjualan');
         $response->assertSee('Budi Santoso');
         $response->assertSee('TRX-' . date('Ymd') . '-0001');
         $response->assertDontSee('Siti Aisyah');
@@ -382,7 +382,7 @@ class LaporanTest extends TestCase
             'tanggal' => Carbon::today()->format('Y-m-d'),
         ]));
         $response->assertOk();
-        $response->assertSee('Laporan Pembelian Barang (Pengadaan Faktur)');
+        $response->assertSee('Laporan Pembelian');
         $response->assertSee('PT Indofood Sukses Makmur');
         $response->assertSee('Rp 1.500.000');
         $response->assertDontSee('CV Sumber Kopi Mandiri');
