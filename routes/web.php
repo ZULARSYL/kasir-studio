@@ -181,7 +181,8 @@ Route::middleware(['auth', 'role:kasir'])
     ->prefix('kasir')
     ->name('kasir.')
     ->group(function () {
-        Route::view('/', 'kasir.index')->name('index');
+        Route::get('/', [\App\Http\Controllers\Kasir\KasirDashboardController::class, 'index'])->name('index');
+        Route::get('/dashboard', [\App\Http\Controllers\Kasir\KasirDashboardController::class, 'index'])->name('dashboard');
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir');
         Route::post('/shift/buka', [KasirController::class, 'bukaShift'])->name('shift.buka');
         Route::post('/shift/tutup', [KasirController::class, 'tutupShift'])->name('shift.tutup');
