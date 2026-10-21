@@ -130,7 +130,7 @@
                         <i class="bi bi-cash-stack fs-3"></i>
                     </div>
                     <div class="overflow-hidden">
-                        <div class="text-muted small fw-semibold text-uppercase">Total Nilai Aset</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Grand Total Nilai Aset</div>
                         <h4 class="fw-bold text-success font-monospace mb-0 text-truncate">
                             Rp {{ number_format($grandTotalAset, 0, ',', '.') }}
                         </h4>
@@ -147,7 +147,7 @@
                         <i class="bi bi-boxes fs-3"></i>
                     </div>
                     <div class="overflow-hidden">
-                        <div class="text-muted small fw-semibold text-uppercase">Kuantitas Stok</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Grand Total Kuantitas</div>
                         <h4 class="fw-bold text-primary font-monospace mb-0 text-truncate">
                             {{ number_format($grandTotalStok, 0, ',', '.') }} Unit
                         </h4>
@@ -214,8 +214,8 @@
                         <th class="text-muted small fw-bold">KATEGORI</th>
                         <th class="text-muted small fw-bold">OUTLET</th>
                         <th class="text-muted small fw-bold">SATUAN</th>
-                        <th class="text-center text-muted small fw-bold">STOK</th>
-                        <th class="text-end pe-4 text-muted small fw-bold">TOTAL ASET</th>
+                        <th class="text-center text-muted small fw-bold">BANYAKNYA STOK DI SISTEM</th>
+                        <th class="text-end pe-4 text-muted small fw-bold">TOTAL ASET PER ITEM</th>
                     </tr>
                 </thead>
                 <tbody>

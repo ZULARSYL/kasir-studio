@@ -25,6 +25,8 @@ class Transaksi extends Model
         'promo_id',
         'nama_pelanggan',
         'durasi_menit',
+        'jumlah_penonton',
+        'denda_penonton',
         'harga_film',
         'harga_room',
         'subtotal_film_room',
@@ -40,6 +42,8 @@ class Transaksi extends Model
 
     protected $casts = [
         'durasi_menit' => 'integer',
+        'jumlah_penonton' => 'integer',
+        'denda_penonton' => 'decimal:2',
         'harga_film' => 'decimal:2',
         'harga_room' => 'decimal:2',
         'subtotal_film_room' => 'decimal:2',
