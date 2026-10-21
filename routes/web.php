@@ -39,7 +39,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/notifikasi/mark-read/{id}', [\App\Http\Controllers\NotificationController::class, 'markRead'])->name('notifikasi.mark-read');
 });
 
-Route::middleware(['auth', 'role:admin'])
+Route::middleware(['auth', 'role:admin', 'menu.access'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -124,12 +124,16 @@ Route::middleware(['auth', 'role:admin'])
             Route::get('pegawai/list', [\App\Http\Controllers\Kepegawaian\PegawaiController::class, 'index'])->name('pegawai');
         });
 
-        // Pengaturan (User)
+        // Pengaturan (User & Hak Akses)
         Route::prefix('pengaturan')->name('pengaturan.')->group(function () {
             // Submenu User
             Route::get('user', [\App\Http\Controllers\Pengaturan\UserController::class, 'index'])->name('user.index');
             Route::resource('user', \App\Http\Controllers\Pengaturan\UserController::class)->except(['index', 'create', 'show', 'edit']);
             Route::get('user/list', [\App\Http\Controllers\Pengaturan\UserController::class, 'index'])->name('user');
+
+            // Submenu Hak Akses
+            Route::get('hak-akses', [\App\Http\Controllers\Pengaturan\HakAksesController::class, 'index'])->name('hak-akses');
+            Route::post('hak-akses', [\App\Http\Controllers\Pengaturan\HakAksesController::class, 'update'])->name('hak-akses.update');
         });
 
         // Laporan (Penjualan Shift, Riwayat Penjualan Harian, Pembelian Faktur)
