@@ -3,6 +3,14 @@
 @section('title', 'Menu Kasir POS | Pressent Studio & Cafe')
 
 @section('content')
+@php
+    $isAdmin = auth()->user()->role === 'admin';
+    $bukaShiftRoute = $isAdmin && Route::has('admin.kasir.shift.buka') ? route('admin.kasir.shift.buka') : route('kasir.shift.buka');
+    $tutupShiftRoute = $isAdmin && Route::has('admin.kasir.shift.tutup') ? route('admin.kasir.shift.tutup') : route('kasir.shift.tutup');
+    $cekPromoRoute = $isAdmin && Route::has('admin.kasir.cek-promo') ? route('admin.kasir.cek-promo') : route('kasir.cek-promo');
+    $checkoutRoute = $isAdmin && Route::has('admin.kasir.checkout') ? route('admin.kasir.checkout') : route('kasir.checkout');
+    $strukBaseUrl = $isAdmin ? url('/admin/kasir/struk') : url('/kasir/struk');
+@endphp
 <div class="container-fluid px-0">
 
     {{-- ALERT NOTIFIKASI --}}
@@ -44,7 +52,18 @@
                     </div>
 
                     <div class="card-body p-4 p-md-5">
-                        <form action="{{ route('kasir.shift.buka') }}" method="POST">
+                        @if($isAdmin)
+                            <div class="alert alert-warning border-0 rounded-4 d-flex align-items-center gap-3 mb-4 p-3 shadow-sm">
+                                <div class="bg-warning text-white rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-shield-exclamation fs-5"></i>
+                                </div>
+                                <div class="small">
+                                    <strong class="d-block text-dark">Mode Kasir Darurat (Administrator)</strong>
+                                </div>
+                            </div>
+                        @endif
+
+                        <form action="{{ $bukaShiftRoute }}" method="POST">
                             @csrf
 
                             <!-- Info Kasir -->
@@ -71,13 +90,13 @@
                                     </div>
                                 </div>
                             @else
-                                <!-- Pilih Outlet Cabang (Jika belum ditentukan di pengaturan user) -->
+                                <!-- Pilih Outlet Cabang (Jika belum ditentukan di pengaturan user atau role Admin) -->
                                 <div class="mb-3">
-                                    <label class="form-label small fw-semibold text-muted">Pilih Outlet Cabang <span class="text-danger">*</span></label>
+                                    <label class="form-label small fw-semibold text-muted">Pilih Outlet Cabang Operasional <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-light border-end-0"><i class="bi bi-shop"></i></span>
                                         <select name="toko_cabang_id" class="form-select border-start-0" required>
-                                            <option value="" disabled selected>-- Pilih Cabang Penugasan --</option>
+                                            <option value="" disabled {{ old('toko_cabang_id') ? '' : 'selected' }}>Pilih Outlet</option>
                                             @foreach($cabangs as $cabang)
                                                 <option value="{{ $cabang->id }}" {{ old('toko_cabang_id') == $cabang->id ? 'selected' : '' }}>
                                                     {{ $cabang->nama_cabang }} - {{ $cabang->alamat }}
@@ -85,6 +104,11 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                    @if($isAdmin)
+                                        <div class="form-text text-muted small mt-1">
+                                            <i class="bi bi-info-circle me-1"></i>Pilih outlet
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
 
@@ -140,9 +164,14 @@
                                 <span class="badge bg-emerald-subtle text-emerald border border-emerald rounded-pill px-3 py-1">
                                     <i class="bi bi-record-fill me-1"></i>Shift Aktif
                                 </span>
+                                @if($isAdmin)
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill px-3 py-1">
+                                        <i class="bi bi-shield-exclamation me-1"></i>Mode Darurat Admin
+                                    </span>
+                                @endif
                             </div>
                             <div class="text-muted small">
-                                Kasir: <strong>{{ auth()->user()->name }}</strong> &bull; 
+                                Petugas: <strong>{{ auth()->user()->name }}</strong> &bull; 
                                 Outlet: <strong class="text-dark">{{ $activeShift->tokoCabang->nama_cabang }}</strong> &bull; 
                                 Buka: {{ $activeShift->waktu_buka->isoFormat('D MMM Y, HH:mm') }} WIB
                             </div>
@@ -744,7 +773,7 @@
         <div class="modal fade" id="modalTutupShift" tabindex="-1" aria-labelledby="modalTutupShiftLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content rounded-4 border-0 shadow">
-                    <form action="{{ route('kasir.shift.tutup') }}" method="POST">
+                    <form action="{{ $tutupShiftRoute }}" method="POST">
                         @csrf
                         <div class="modal-header border-bottom py-3">
                             <h5 class="modal-title fw-bold text-danger" id="modalTutupShiftLabel">
@@ -753,6 +782,12 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body p-4">
+                            @if($isAdmin)
+                                <div class="alert alert-warning-subtle border border-warning-subtle text-warning-emphasis rounded-3 p-3 small mb-3">
+                                    <i class="bi bi-info-circle-fill me-1"></i> <strong>Pemberitahuan Admin:</strong> Setelah menutup shift di cabang <strong>{{ $activeShift->tokoCabang->nama_cabang }}</strong>, Anda dapat membuka kasir kembali untuk outlet lain yang membutuhkan penanganan darurat.
+                                </div>
+                            @endif
+
                             <!-- Rekap Shift -->
                             <div class="p-3 bg-light rounded-3 border mb-3">
                                 <div class="d-flex justify-content-between small text-muted mb-1">
@@ -1544,7 +1579,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            fetch('{{ route("kasir.cek-promo") }}', {
+            fetch('{{ $cekPromoRoute }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1826,7 +1861,7 @@ document.addEventListener('DOMContentLoaded', function () {
             btnCheckoutBayar.disabled = true;
             btnCheckoutBayar.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span>Memproses Pembayaran...`;
 
-            fetch('{{ route("kasir.checkout") }}', {
+            fetch('{{ $checkoutRoute }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1844,7 +1879,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.status === 'success') {
                     modalKonfirmasiPembayaran.hide();
                     // Buka popup cetak struk thermal
-                    const strukUrl = `{{ url('/kasir/struk') }}/${data.transaksi_id}`;
+                    const strukUrl = `{{ $strukBaseUrl }}/${data.transaksi_id}`;
                     const printWindow = window.open(strukUrl, '_blank', 'width=420,height=600,scrollbars=yes');
                     if (!printWindow) {
                         window.location.href = strukUrl;

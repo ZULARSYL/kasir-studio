@@ -797,11 +797,11 @@
 
                         <!-- Quick Link: Menu Kasir POS (Khusus jika Admin ingin buka POS Kasir) -->
                         <li class="sidebar-item">
-                            <a href="{{ Route::has('kasir.index') ? route('kasir.index') : url('/kasir') }}" 
-                               class="sidebar-link {{ request()->is('kasir*') ? 'active' : '' }}">
+                            <a href="{{ Route::has('admin.kasir.index') ? route('admin.kasir.index') : url('/admin/kasir') }}" 
+                               class="sidebar-link {{ request()->is('admin/kasir*') ? 'active' : '' }}">
                                 <div class="sidebar-link-content">
                                     <span class="sidebar-link-icon"><i class="bi bi-shop"></i></span>
-                                    <span class="sidebar-link-text">Menu Kasir</span>
+                                    <span class="sidebar-link-text">Menu Kasir (POS)</span>
                                 </div>
                             </a>
                         </li>
@@ -1206,6 +1206,9 @@
                                     </h6>
                                     <span class="badge {{ ($appNotifications['unread_count'] ?? 0) > 0 ? 'bg-danger' : 'bg-secondary' }} rounded-pill px-2" id="notificationBadgeCount">
                                         {{ $appNotifications['unread_count'] ?? 0 }} Baru
+                                    </span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2" style="font-size: 0.7rem;">
+                                        {{ ($userRole ?? auth()->user()?->role) === 'admin' ? 'Khusus Admin' : 'Khusus Kasir' }}
                                     </span>
                                 </div>
                                 @if(($appNotifications['unread_count'] ?? 0) > 0)

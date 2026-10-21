@@ -149,7 +149,7 @@ class NotificationService
                 'badge_text' => 'Belum Buka',
                 'badge_class' => 'bg-warning-subtle text-warning',
                 'time_ago' => 'Hari Ini',
-                'url' => Route::has('admin.laporan.penjualan') ? route('admin.laporan.penjualan') : url('/admin/laporan/penjualan'),
+                'url' => Route::has('admin.kasir.index') ? route('admin.kasir.index') : url('/admin/kasir'),
                 'created_at' => $now,
             ];
         }
@@ -218,7 +218,7 @@ class NotificationService
                 'id' => "admin_low_stock_{$item->toko_cabang_id}_{$item->barang_id}",
                 'role' => 'admin',
                 'category' => 'Notifikasi Stok',
-                'title' => "{$item->nama_barang}",
+                'title' => "Stok Menipis (< 10): {$item->nama_barang}",
                 'message' => "Stok {$item->nama_barang} tersisa {$stok} {$satuan} di {$item->nama_cabang}. Segera lakukan pemesanan barang.",
                 'icon' => 'bi-exclamation-triangle-fill',
                 'icon_bg' => $isCritical ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning',
