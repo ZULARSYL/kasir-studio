@@ -31,6 +31,14 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
+// Pusat Notifikasi (Akses Bersama Role Admin & Kasir)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/notifikasi', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifikasi.index');
+    Route::get('/notifikasi/json', [\App\Http\Controllers\NotificationController::class, 'getJson'])->name('notifikasi.json');
+    Route::post('/notifikasi/mark-all-read', [\App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('notifikasi.mark-all-read');
+    Route::post('/notifikasi/mark-read/{id}', [\App\Http\Controllers\NotificationController::class, 'markRead'])->name('notifikasi.mark-read');
+});
+
 Route::middleware(['auth', 'role:admin'])
     ->prefix('admin')
     ->name('admin.')
