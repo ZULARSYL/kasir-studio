@@ -10,7 +10,8 @@ class EnsureUserHasRole
 {
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        $userRole = $request->user()?->role;
+        $user = $request->user();
+        $userRole = $user?->role;
 
         $allowedRoles = [];
         foreach ($roles as $r) {
@@ -22,10 +23,19 @@ class EnsureUserHasRole
             }
         }
 
-        if (! in_array($userRole, $allowedRoles, true)) {
-            abort(403);
+        if (in_array($userRole, $allowedRoles, true)) {
+            return $next($request);
         }
 
-        return $next($request);
+        // Cek jika user memiliki izin menu spesifik yang sedang diakses pada area admin (misal kasir/jabatan diberikan akses laporan admin)
+        $routeName = $request->route()?->getName();
+        if ($user && $routeName && str_starts_with($routeName, 'admin.') && ! str_starts_with($routeName, 'admin.kasir.')) {
+            $menuKey = \App\Services\HakAksesService::resolveMenuKeyFromRoute($routeName);
+            if ($menuKey && \App\Services\HakAksesService::canAccess($user, $menuKey)) {
+                return $next($request);
+            }
+        }
+
+        abort(403);
     }
 }

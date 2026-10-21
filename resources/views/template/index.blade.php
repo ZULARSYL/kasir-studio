@@ -750,127 +750,160 @@
                 <ul class="sidebar-menu">
 
                     {{-- ============================================================== --}}
-                    {{-- 1. ROLE KASIR (HANYA MENU KASIR / POS)                         --}}
+                    {{-- 1. ROLE KASIR (MENU UTAMA KASIR)                               --}}
                     {{-- ============================================================== --}}
                     @if ($userRole === 'kasir')
-                        <li class="nav-category">Main Kasir</li>
+                        @if ($authUser?->canAccessMenu('kasir_dashboard') || $authUser?->canAccessMenu('kasir_pos'))
+                            <li class="nav-category">Main Kasir</li>
 
-                        <!-- Dashboard Kasir -->
-                        <li class="sidebar-item">
-                            <a href="{{ Route::has('kasir.dashboard') ? route('kasir.dashboard') : (Route::has('kasir.index') ? route('kasir.index') : url('/kasir')) }}" 
-                               class="sidebar-link {{ request()->routeIs('kasir.index') || request()->routeIs('kasir.dashboard') || (request()->is('kasir') && !request()->is('kasir/kasir*')) ? 'active' : '' }}">
-                                <div class="sidebar-link-content">
-                                    <span class="sidebar-link-icon"><i class="bi bi-grid-fill"></i></span>
-                                    <span class="sidebar-link-text">Dashboard</span>
-                                </div>
-                            </a>
-                        </li>
+                            <!-- Dashboard Kasir -->
+                            @if ($authUser?->canAccessMenu('kasir_dashboard'))
+                                <li class="sidebar-item">
+                                    <a href="{{ Route::has('kasir.dashboard') ? route('kasir.dashboard') : (Route::has('kasir.index') ? route('kasir.index') : url('/kasir')) }}" 
+                                       class="sidebar-link {{ request()->routeIs('kasir.index') || request()->routeIs('kasir.dashboard') || (request()->is('kasir') && !request()->is('kasir/kasir*')) ? 'active' : '' }}">
+                                        <div class="sidebar-link-content">
+                                            <span class="sidebar-link-icon"><i class="bi bi-grid-fill"></i></span>
+                                            <span class="sidebar-link-text">Dashboard</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            @endif
 
-                        <!-- Menu Kasir (POS) -->
-                        <li class="sidebar-item">
-                            <a href="{{ Route::has('kasir.kasir') ? route('kasir.kasir') : url('/kasir/kasir') }}" 
-                               class="sidebar-link {{ request()->routeIs('kasir.kasir*') ? 'active' : '' }}">
-                                <div class="sidebar-link-content">
-                                    <span class="sidebar-link-icon"><i class="bi bi-calculator"></i></span>
-                                    <span class="sidebar-link-text">Menu Kasir (POS)</span>
-                                </div>
-                            </a>
-                        </li>
+                            <!-- Menu Kasir (POS) -->
+                            @if ($authUser?->canAccessMenu('kasir_pos'))
+                                <li class="sidebar-item">
+                                    <a href="{{ Route::has('kasir.kasir') ? route('kasir.kasir') : url('/kasir/kasir') }}" 
+                                       class="sidebar-link {{ request()->routeIs('kasir.kasir*') ? 'active' : '' }}">
+                                        <div class="sidebar-link-content">
+                                            <span class="sidebar-link-icon"><i class="bi bi-calculator"></i></span>
+                                            <span class="sidebar-link-text">Menu Kasir (POS)</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            @endif
+                        @endif
+                    @endif
 
                     {{-- ============================================================== --}}
-                    {{-- 2. ROLE ADMIN (SEMUA MENU LENGKAP SESUAI SPESIFIKASI)          --}}
+                    {{-- 2. ROLE ADMIN / UTAMA (DASHBOARD & QUICK POS)                  --}}
                     {{-- ============================================================== --}}
-                    @else
-                        <!-- CATEGORY: MAIN -->
-                        <li class="nav-category">Main</li>
+                    @if ($userRole !== 'kasir')
+                        @if ($authUser?->canAccessMenu('dashboard') || $authUser?->canAccessMenu('kasir_pos'))
+                            <!-- CATEGORY: MAIN -->
+                            <li class="nav-category">Main</li>
 
-                        <!-- Dashboard -->
-                        <li class="sidebar-item">
-                            <a href="{{ Route::has('admin.dashboard') ? route('admin.dashboard') : url('/admin') }}" 
-                               class="sidebar-link {{ request()->is('admin') || request()->is('admin/dashboard') ? 'active' : '' }}">
-                                <div class="sidebar-link-content">
-                                    <span class="sidebar-link-icon"><i class="bi bi-grid-fill"></i></span>
-                                    <span class="sidebar-link-text">Dashboard</span>
-                                </div>
-                            </a>
-                        </li>
+                            <!-- Dashboard -->
+                            @if ($authUser?->canAccessMenu('dashboard'))
+                                <li class="sidebar-item">
+                                    <a href="{{ Route::has('admin.dashboard') ? route('admin.dashboard') : url('/admin') }}" 
+                                       class="sidebar-link {{ request()->is('admin') || request()->is('admin/dashboard') ? 'active' : '' }}">
+                                        <div class="sidebar-link-content">
+                                            <span class="sidebar-link-icon"><i class="bi bi-grid-fill"></i></span>
+                                            <span class="sidebar-link-text">Dashboard</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            @endif
 
-                        <!-- Quick Link: Menu Kasir POS (Khusus jika Admin ingin buka POS Kasir) -->
-                        <li class="sidebar-item">
-                            <a href="{{ Route::has('admin.kasir.index') ? route('admin.kasir.index') : url('/admin/kasir') }}" 
-                               class="sidebar-link {{ request()->is('admin/kasir*') ? 'active' : '' }}">
-                                <div class="sidebar-link-content">
-                                    <span class="sidebar-link-icon"><i class="bi bi-shop"></i></span>
-                                    <span class="sidebar-link-text">Menu Kasir (POS)</span>
-                                </div>
-                            </a>
-                        </li>
+                            <!-- Quick Link: Menu Kasir POS (Khusus jika Admin ingin buka POS Kasir) -->
+                            @if ($authUser?->canAccessMenu('kasir_pos'))
+                                <li class="sidebar-item">
+                                    <a href="{{ Route::has('admin.kasir.index') ? route('admin.kasir.index') : url('/admin/kasir') }}" 
+                                       class="sidebar-link {{ request()->is('admin/kasir*') ? 'active' : '' }}">
+                                        <div class="sidebar-link-content">
+                                            <span class="sidebar-link-icon"><i class="bi bi-shop"></i></span>
+                                            <span class="sidebar-link-text">Menu Kasir (POS)</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            @endif
+                        @endif
+                    @endif
 
+                    {{-- ============================================================== --}}
+                    {{-- 3. LAYANAN STUDIO & CAFE (FILM & CAFE)                         --}}
+                    {{-- ============================================================== --}}
+                    @if ($authUser?->canAccessMenu('film') || $authUser?->canAccessMenu('cafe'))
                         <!-- CATEGORY: FILM & CAFE -->
                         <li class="nav-category">Layanan Studio & Cafe</li>
 
                         <!-- FILM -->
-                        <li class="sidebar-item">
-                            <a class="sidebar-link {{ request()->is('admin/film*') ? 'active' : '' }}" 
-                               data-bs-toggle="collapse" 
-                               href="#menuFilm" 
-                               role="button" 
-                               aria-expanded="{{ request()->is('admin/film*') ? 'true' : 'false' }}" 
-                               aria-controls="menuFilm">
-                                <div class="sidebar-link-content">
-                                    <span class="sidebar-link-icon"><i class="bi bi-film"></i></span>
-                                    <span class="sidebar-link-text">FILM</span>
+                        @if ($authUser?->canAccessMenu('film'))
+                            <li class="sidebar-item">
+                                <a class="sidebar-link {{ request()->is('admin/film*') ? 'active' : '' }}" 
+                                   data-bs-toggle="collapse" 
+                                   href="#menuFilm" 
+                                   role="button" 
+                                   aria-expanded="{{ request()->is('admin/film*') ? 'true' : 'false' }}" 
+                                   aria-controls="menuFilm">
+                                    <div class="sidebar-link-content">
+                                        <span class="sidebar-link-icon"><i class="bi bi-film"></i></span>
+                                        <span class="sidebar-link-text">FILM</span>
+                                    </div>
+                                    <span class="sidebar-toggle-indicator">+</span>
+                                </a>
+                                <div class="collapse {{ request()->is('admin/film*') ? 'show' : '' }}" id="menuFilm">
+                                    <ul class="sidebar-submenu">
+                                        @if ($authUser?->canAccessMenu('film.index'))
+                                            <li class="sidebar-submenu-item">
+                                                <a href="{{ Route::has('admin.film.index') ? route('admin.film.index') : url('/admin/film') }}" 
+                                                   class="sidebar-submenu-link {{ request()->is('admin/film*') ? 'active' : '' }}">
+                                                    <i class="bi bi-camera-reels"></i>
+                                                    <span>List Film</span>
+                                                </a>
+                                            </li>
+                                        @endif
+                                    </ul>
                                 </div>
-                                <span class="sidebar-toggle-indicator">+</span>
-                            </a>
-                            <div class="collapse {{ request()->is('admin/film*') ? 'show' : '' }}" id="menuFilm">
-                                <ul class="sidebar-submenu">
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.film.index') ? route('admin.film.index') : url('/admin/film') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/film*') ? 'active' : '' }}">
-                                            <i class="bi bi-camera-reels"></i>
-                                            <span>List Film</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
+                            </li>
+                        @endif
 
                         <!-- CAFE -->
-                        <li class="sidebar-item">
-                            <a class="sidebar-link {{ request()->is('admin/cafe*') ? 'active' : '' }}" 
-                               data-bs-toggle="collapse" 
-                               href="#menuCafe" 
-                               role="button" 
-                               aria-expanded="{{ request()->is('admin/cafe*') ? 'true' : 'false' }}" 
-                               aria-controls="menuCafe">
-                                <div class="sidebar-link-content">
-                                    <span class="sidebar-link-icon"><i class="bi bi-cup-hot"></i></span>
-                                    <span class="sidebar-link-text">Cafe</span>
+                        @if ($authUser?->canAccessMenu('cafe'))
+                            <li class="sidebar-item">
+                                <a class="sidebar-link {{ request()->is('admin/cafe*') ? 'active' : '' }}" 
+                                   data-bs-toggle="collapse" 
+                                   href="#menuCafe" 
+                                   role="button" 
+                                   aria-expanded="{{ request()->is('admin/cafe*') ? 'true' : 'false' }}" 
+                                   aria-controls="menuCafe">
+                                    <div class="sidebar-link-content">
+                                        <span class="sidebar-link-icon"><i class="bi bi-cup-hot"></i></span>
+                                        <span class="sidebar-link-text">Cafe</span>
+                                    </div>
+                                    <span class="sidebar-toggle-indicator">+</span>
+                                </a>
+                                <div class="collapse {{ request()->is('admin/cafe*') ? 'show' : '' }}" id="menuCafe">
+                                    <ul class="sidebar-submenu">
+                                        @if ($authUser?->canAccessMenu('cafe.stok'))
+                                            <li class="sidebar-submenu-item">
+                                                <a href="{{ Route::has('admin.cafe.stok') ? route('admin.cafe.stok') : url('/admin/cafe/stok') }}" 
+                                                   class="sidebar-submenu-link {{ request()->is('admin/cafe/stok*') ? 'active' : '' }}">
+                                                    <i class="bi bi-boxes"></i>
+                                                    <span>Stok Barang</span>
+                                                </a>
+                                            </li>
+                                        @endif
+                                        @if ($authUser?->canAccessMenu('cafe.faktur'))
+                                            <li class="sidebar-submenu-item">
+                                                <a href="{{ Route::has('admin.cafe.faktur') ? route('admin.cafe.faktur') : url('/admin/cafe/faktur') }}" 
+                                                   class="sidebar-submenu-link {{ request()->is('admin/cafe/faktur*') ? 'active' : '' }}"
+                                                   title="Digunakan untuk mengisi harga menu cafe">
+                                                    <i class="bi bi-receipt-cutoff"></i>
+                                                    <span>Faktur Barang</span>
+                                                </a>
+                                            </li>
+                                        @endif
+                                    </ul>
                                 </div>
-                                <span class="sidebar-toggle-indicator">+</span>
-                            </a>
-                            <div class="collapse {{ request()->is('admin/cafe*') ? 'show' : '' }}" id="menuCafe">
-                                <ul class="sidebar-submenu">
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.cafe.stok') ? route('admin.cafe.stok') : url('/admin/cafe/stok') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/cafe/stok*') ? 'active' : '' }}">
-                                            <i class="bi bi-boxes"></i>
-                                            <span>Stok Barang</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.cafe.faktur') ? route('admin.cafe.faktur') : url('/admin/cafe/faktur') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/cafe/faktur*') ? 'active' : '' }}"
-                                           title="Digunakan untuk mengisi harga menu cafe">
-                                            <i class="bi bi-receipt-cutoff"></i>
-                                            <span>Faktur Barang</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
+                            </li>
+                        @endif
+                    @endif
 
+                    {{-- ============================================================== --}}
+                    {{-- 4. KEUANGAN (PEMASUKAN & PENGELUARAN)                           --}}
+                    {{-- ============================================================== --}}
+                    @if ($authUser?->canAccessMenu('keuangan'))
                         <!-- CATEGORY: KEUANGAN -->
                         <li class="nav-category">Keuangan</li>
 
@@ -890,24 +923,33 @@
                             </a>
                             <div class="collapse {{ request()->is('admin/keuangan*') ? 'show' : '' }}" id="menuKeuangan">
                                 <ul class="sidebar-submenu">
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.keuangan.pemasukan') ? route('admin.keuangan.pemasukan') : url('/admin/keuangan/pemasukan') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/keuangan/pemasukan*') ? 'active' : '' }}">
-                                            <i class="bi bi-arrow-down-left-circle text-success"></i>
-                                            <span>Pemasukan</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.keuangan.pengeluaran') ? route('admin.keuangan.pengeluaran') : url('/admin/keuangan/pengeluaran') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/keuangan/pengeluaran*') ? 'active' : '' }}">
-                                            <i class="bi bi-arrow-up-right-circle text-danger"></i>
-                                            <span>Pengeluaran</span>
-                                        </a>
-                                    </li>
+                                    @if ($authUser?->canAccessMenu('keuangan.pemasukan'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.keuangan.pemasukan') ? route('admin.keuangan.pemasukan') : url('/admin/keuangan/pemasukan') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/keuangan/pemasukan*') ? 'active' : '' }}">
+                                                <i class="bi bi-arrow-down-left-circle text-success"></i>
+                                                <span>Pemasukan</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('keuangan.pengeluaran'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.keuangan.pengeluaran') ? route('admin.keuangan.pengeluaran') : url('/admin/keuangan/pengeluaran') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/keuangan/pengeluaran*') ? 'active' : '' }}">
+                                                <i class="bi bi-arrow-up-right-circle text-danger"></i>
+                                                <span>Pengeluaran</span>
+                                            </a>
+                                        </li>
+                                    @endif
                                 </ul>
                             </div>
                         </li>
+                    @endif
 
+                    {{-- ============================================================== --}}
+                    {{-- 5. MASTER DATA SISTEM                                          --}}
+                    {{-- ============================================================== --}}
+                    @if ($authUser?->canAccessMenu('master'))
                         <!-- CATEGORY: MASTER DATA -->
                         <li class="nav-category">Master Data</li>
 
@@ -927,87 +969,114 @@
                             </a>
                             <div class="collapse {{ request()->is('admin/master*') ? 'show' : '' }}" id="menuMasterData">
                                 <ul class="sidebar-submenu">
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.tipe-pembayaran') ? route('admin.master.tipe-pembayaran') : url('/admin/master/tipe-pembayaran') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/tipe-pembayaran*') ? 'active' : '' }}">
-                                            <i class="bi bi-credit-card"></i>
-                                            <span>Tipe Pembayaran</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.harga-perdurasi') ? route('admin.master.harga-perdurasi') : url('/admin/master/harga-perdurasi') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/harga-perdurasi*') ? 'active' : '' }}">
-                                            <i class="bi bi-clock-history"></i>
-                                            <span>Harga Perdurasi</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.toko-cabang') ? route('admin.master.toko-cabang') : url('/admin/master/toko-cabang') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/toko-cabang*') ? 'active' : '' }}">
-                                            <i class="bi bi-buildings"></i>
-                                            <span>Toko Cabang</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.room') ? route('admin.master.room') : url('/admin/master/room') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/room*') ? 'active' : '' }}">
-                                            <i class="bi bi-door-open"></i>
-                                            <span>Room</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.promo') ? route('admin.master.promo') : url('/admin/master/promo') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/promo*') ? 'active' : '' }}">
-                                            <i class="bi bi-percent"></i>
-                                            <span>Promo</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.menu-cafe') ? route('admin.master.menu-cafe') : url('/admin/master/menu-cafe') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/menu-cafe*') ? 'active' : '' }}">
-                                            <i class="bi bi-tag"></i>
-                                            <span>Menu Cafe</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.genre-film') ? route('admin.master.genre-film') : url('/admin/master/genre-film') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/genre-film*') ? 'active' : '' }}">
-                                            <i class="bi bi-camera-video"></i>
-                                            <span>Genre Film</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.jenis-biaya') ? route('admin.master.jenis-biaya') : url('/admin/master/jenis-biaya') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/jenis-biaya*') ? 'active' : '' }}">
-                                            <i class="bi bi-cash-coin"></i>
-                                            <span>Master Jenis Biaya</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.jabatan') ? route('admin.master.jabatan') : url('/admin/master/jabatan') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/jabatan*') ? 'active' : '' }}">
-                                            <i class="bi bi-person-badge"></i>
-                                            <span>Master Jabatan</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.satuan-barang') ? route('admin.master.satuan-barang') : url('/admin/master/satuan-barang') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/satuan-barang*') ? 'active' : '' }}">
-                                            <i class="bi bi-box-seam"></i>
-                                            <span>Satuan Barang</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.master.barang') ? route('admin.master.barang') : url('/admin/master/barang') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/master/barang*') ? 'active' : '' }}">
-                                            <i class="bi bi-box2"></i>
-                                            <span>Master Barang</span>
-                                        </a>
-                                    </li>
+                                    @if ($authUser?->canAccessMenu('master.tipe-pembayaran'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.tipe-pembayaran') ? route('admin.master.tipe-pembayaran') : url('/admin/master/tipe-pembayaran') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/tipe-pembayaran*') ? 'active' : '' }}">
+                                                <i class="bi bi-credit-card"></i>
+                                                <span>Tipe Pembayaran</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.harga-perdurasi'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.harga-perdurasi') ? route('admin.master.harga-perdurasi') : url('/admin/master/harga-perdurasi') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/harga-perdurasi*') ? 'active' : '' }}">
+                                                <i class="bi bi-clock-history"></i>
+                                                <span>Harga Perdurasi</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.toko-cabang'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.toko-cabang') ? route('admin.master.toko-cabang') : url('/admin/master/toko-cabang') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/toko-cabang*') ? 'active' : '' }}">
+                                                <i class="bi bi-buildings"></i>
+                                                <span>Toko Cabang</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.room'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.room') ? route('admin.master.room') : url('/admin/master/room') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/room*') ? 'active' : '' }}">
+                                                <i class="bi bi-door-open"></i>
+                                                <span>Room</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.promo'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.promo') ? route('admin.master.promo') : url('/admin/master/promo') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/promo*') ? 'active' : '' }}">
+                                                <i class="bi bi-percent"></i>
+                                                <span>Promo</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.menu-cafe'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.menu-cafe') ? route('admin.master.menu-cafe') : url('/admin/master/menu-cafe') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/menu-cafe*') ? 'active' : '' }}">
+                                                <i class="bi bi-tag"></i>
+                                                <span>Menu Cafe</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.genre-film'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.genre-film') ? route('admin.master.genre-film') : url('/admin/master/genre-film') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/genre-film*') ? 'active' : '' }}">
+                                                <i class="bi bi-camera-video"></i>
+                                                <span>Genre Film</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.jenis-biaya'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.jenis-biaya') ? route('admin.master.jenis-biaya') : url('/admin/master/jenis-biaya') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/jenis-biaya*') ? 'active' : '' }}">
+                                                <i class="bi bi-cash-coin"></i>
+                                                <span>Master Jenis Biaya</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.jabatan'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.jabatan') ? route('admin.master.jabatan') : url('/admin/master/jabatan') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/jabatan*') ? 'active' : '' }}">
+                                                <i class="bi bi-person-badge"></i>
+                                                <span>Master Jabatan</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.satuan-barang'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.satuan-barang') ? route('admin.master.satuan-barang') : url('/admin/master/satuan-barang') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/satuan-barang*') ? 'active' : '' }}">
+                                                <i class="bi bi-box-seam"></i>
+                                                <span>Satuan Barang</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('master.barang'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.barang') ? route('admin.master.barang') : url('/admin/master/barang') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/barang*') ? 'active' : '' }}">
+                                                <i class="bi bi-box2"></i>
+                                                <span>Master Barang</span>
+                                            </a>
+                                        </li>
+                                    @endif
                                 </ul>
                             </div>
                         </li>
+                    @endif
 
+                    {{-- ============================================================== --}}
+                    {{-- 6. LAPORAN & REKAPITULASI                                      --}}
+                    {{-- ============================================================== --}}
+                    @if ($authUser?->canAccessMenu('laporan'))
                         <!-- CATEGORY: LAPORAN -->
                         <li class="nav-category">Laporan</li>
 
@@ -1027,45 +1096,60 @@
                             </a>
                             <div class="collapse {{ request()->is('admin/laporan*') ? 'show' : '' }}" id="menuLaporan">
                                 <ul class="sidebar-submenu">
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.laporan.riwayat') ? route('admin.laporan.riwayat') : url('/admin/laporan/riwayat') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/laporan/riwayat*') ? 'active' : '' }}">
-                                            <i class="bi bi-clock-history"></i>
-                                            <span>Riwayat</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.laporan.penjualan') ? route('admin.laporan.penjualan') : url('/admin/laporan/penjualan') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/laporan/penjualan*') ? 'active' : '' }}">
-                                            <i class="bi bi-graph-up-arrow text-success"></i>
-                                            <span>Laporan Penjualan</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.laporan.pembelian') ? route('admin.laporan.pembelian') : url('/admin/laporan/pembelian') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/laporan/pembelian*') ? 'active' : '' }}">
-                                            <i class="bi bi-cart-check"></i>
-                                            <span>Laporan Pembelian</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.laporan.stok') ? route('admin.laporan.stok') : url('/admin/laporan/stok') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/laporan/stok*') ? 'active' : '' }}">
-                                            <i class="bi bi-box-seam"></i>
-                                            <span>Laporan Stok</span>
-                                        </a>
-                                    </li>
-                                     <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.laporan.laba-rugi') ? route('admin.laporan.laba-rugi') : url('/admin/laporan/laba-rugi') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/laporan/laba-rugi*') ? 'active' : '' }}">
-                                            <i class="bi bi-cash-stack"></i>
-                                            <span>Laporan Laba Rugi</span>
-                                        </a>
-                                    </li>
+                                    @if ($authUser?->canAccessMenu('laporan.riwayat'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.laporan.riwayat') ? route('admin.laporan.riwayat') : url('/admin/laporan/riwayat') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/laporan/riwayat*') ? 'active' : '' }}">
+                                                <i class="bi bi-clock-history"></i>
+                                                <span>Riwayat</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('laporan.penjualan'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.laporan.penjualan') ? route('admin.laporan.penjualan') : url('/admin/laporan/penjualan') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/laporan/penjualan*') ? 'active' : '' }}">
+                                                <i class="bi bi-graph-up-arrow text-success"></i>
+                                                <span>Laporan Penjualan</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('laporan.pembelian'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.laporan.pembelian') ? route('admin.laporan.pembelian') : url('/admin/laporan/pembelian') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/laporan/pembelian*') ? 'active' : '' }}">
+                                                <i class="bi bi-cart-check"></i>
+                                                <span>Laporan Pembelian</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('laporan.stok'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.laporan.stok') ? route('admin.laporan.stok') : url('/admin/laporan/stok') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/laporan/stok*') ? 'active' : '' }}">
+                                                <i class="bi bi-box-seam"></i>
+                                                <span>Laporan Stok</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('laporan.laba-rugi'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.laporan.laba-rugi') ? route('admin.laporan.laba-rugi') : url('/admin/laporan/laba-rugi') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/laporan/laba-rugi*') ? 'active' : '' }}">
+                                                <i class="bi bi-cash-stack"></i>
+                                                <span>Laporan Laba Rugi</span>
+                                            </a>
+                                        </li>
+                                    @endif
                                 </ul>
                             </div>
                         </li>
+                    @endif
 
+                    {{-- ============================================================== --}}
+                    {{-- 7. KEPEGAWAIAN & SDM                                           --}}
+                    {{-- ============================================================== --}}
+                    @if ($authUser?->canAccessMenu('kepegawaian'))
                         <!-- CATEGORY: KEPEGAWAIAN -->
                         <li class="nav-category">Kepegawaian</li>
 
@@ -1085,24 +1169,33 @@
                             </a>
                             <div class="collapse {{ request()->is('admin/kepegawaian*') ? 'show' : '' }}" id="menuKepegawaian">
                                 <ul class="sidebar-submenu">
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.kepegawaian.jabatan.index') ? route('admin.kepegawaian.jabatan.index') : (Route::has('admin.kepegawaian.jabatan') ? route('admin.kepegawaian.jabatan') : url('/admin/kepegawaian/jabatan')) }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/kepegawaian/jabatan*') ? 'active' : '' }}">
-                                            <i class="bi bi-person-badge"></i>
-                                            <span>Jabatan</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.kepegawaian.pegawai.index') ? route('admin.kepegawaian.pegawai.index') : (Route::has('admin.kepegawaian.pegawai') ? route('admin.kepegawaian.pegawai') : url('/admin/kepegawaian/pegawai')) }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/kepegawaian/pegawai*') ? 'active' : '' }}">
-                                            <i class="bi bi-person-lines-fill"></i>
-                                            <span>Pegawai</span>
-                                        </a>
-                                    </li>
+                                    @if ($authUser?->canAccessMenu('kepegawaian.jabatan'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.kepegawaian.jabatan.index') ? route('admin.kepegawaian.jabatan.index') : (Route::has('admin.kepegawaian.jabatan') ? route('admin.kepegawaian.jabatan') : url('/admin/kepegawaian/jabatan')) }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/kepegawaian/jabatan*') ? 'active' : '' }}">
+                                                <i class="bi bi-person-badge"></i>
+                                                <span>Jabatan</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('kepegawaian.pegawai'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.kepegawaian.pegawai.index') ? route('admin.kepegawaian.pegawai.index') : (Route::has('admin.kepegawaian.pegawai') ? route('admin.kepegawaian.pegawai') : url('/admin/kepegawaian/pegawai')) }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/kepegawaian/pegawai*') ? 'active' : '' }}">
+                                                <i class="bi bi-person-lines-fill"></i>
+                                                <span>Pegawai</span>
+                                            </a>
+                                        </li>
+                                    @endif
                                 </ul>
                             </div>
                         </li>
+                    @endif
 
+                    {{-- ============================================================== --}}
+                    {{-- 8. SISTEM & PENGATURAN                                         --}}
+                    {{-- ============================================================== --}}
+                    @if ($authUser?->canAccessMenu('pengaturan'))
                         <!-- CATEGORY: SISTEM & PENGATURAN -->
                         <li class="nav-category">Sistem & Pengaturan</li>
 
@@ -1122,27 +1215,33 @@
                             </a>
                             <div class="collapse {{ request()->is('admin/pengaturan*') ? 'show' : '' }}" id="menuPengaturan">
                                 <ul class="sidebar-submenu">
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.pengaturan.user.index') ? route('admin.pengaturan.user.index') : (Route::has('admin.pengaturan.user') ? route('admin.pengaturan.user') : url('/admin/pengaturan/user')) }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/pengaturan/user*') ? 'active' : '' }}">
-                                            <i class="bi bi-person-gear"></i>
-                                            <span>User</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.pengaturan.hak-akses') ? route('admin.pengaturan.hak-akses') : url('/admin/pengaturan/hak-akses') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/pengaturan/hak-akses*') ? 'active' : '' }}">
-                                            <i class="bi bi-key"></i>
-                                            <span>Hak Akses</span>
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-submenu-item">
-                                        <a href="{{ Route::has('admin.pengaturan.struk') ? route('admin.pengaturan.struk') : url('/admin/pengaturan/struk') }}" 
-                                           class="sidebar-submenu-link {{ request()->is('admin/pengaturan/struk*') ? 'active' : '' }}">
-                                            <i class="bi bi-printer"></i>
-                                            <span>Template untuk Struk</span>
-                                        </a>
-                                    </li>
+                                    @if ($authUser?->canAccessMenu('pengaturan.user'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.pengaturan.user.index') ? route('admin.pengaturan.user.index') : (Route::has('admin.pengaturan.user') ? route('admin.pengaturan.user') : url('/admin/pengaturan/user')) }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/pengaturan/user*') ? 'active' : '' }}">
+                                                <i class="bi bi-person-gear"></i>
+                                                <span>User</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('pengaturan.hak-akses'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.pengaturan.hak-akses') ? route('admin.pengaturan.hak-akses') : url('/admin/pengaturan/hak-akses') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/pengaturan/hak-akses*') ? 'active' : '' }}">
+                                                <i class="bi bi-key"></i>
+                                                <span>Hak Akses</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if ($authUser?->canAccessMenu('pengaturan.struk'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.pengaturan.struk') ? route('admin.pengaturan.struk') : url('/admin/pengaturan/struk') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/pengaturan/struk*') ? 'active' : '' }}">
+                                                <i class="bi bi-printer"></i>
+                                                <span>Template untuk Struk</span>
+                                            </a>
+                                        </li>
+                                    @endif
                                 </ul>
                             </div>
                         </li>

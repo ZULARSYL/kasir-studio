@@ -112,4 +112,12 @@ class User extends Authenticatable
             default => 'bi-person text-secondary',
         };
     }
+
+    /**
+     * Cek apakah user memiliki hak akses ke menu atau submenu tertentu.
+     */
+    public function canAccessMenu(string $menuKey): bool
+    {
+        return \App\Services\HakAksesService::canAccess($this, $menuKey);
+    }
 }

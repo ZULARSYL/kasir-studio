@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'menu.access' => \App\Http\Middleware\EnsureUserCanAccessMenu::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
