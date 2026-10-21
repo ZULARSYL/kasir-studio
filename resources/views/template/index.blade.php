@@ -755,17 +755,21 @@
                     @if ($userRole === 'kasir')
                         <li class="nav-category">Main Kasir</li>
 
-                        <!-- Menu Kasir POS -->
+                        <!-- Dashboard Kasir -->
                         <li class="sidebar-item">
-                            <a href="{{ Route::has('kasir.dashboard') ? route('kasir.dashboard') : url('/kasir') }}" 
-                               class="sidebar-link {{ request()->is('kasir*') ? 'active' : '' }}">
+                            <a href="{{ Route::has('kasir.dashboard') ? route('kasir.dashboard') : (Route::has('kasir.index') ? route('kasir.index') : url('/kasir')) }}" 
+                               class="sidebar-link {{ request()->routeIs('kasir.index') || request()->routeIs('kasir.dashboard') || (request()->is('kasir') && !request()->is('kasir/kasir*')) ? 'active' : '' }}">
                                 <div class="sidebar-link-content">
                                     <span class="sidebar-link-icon"><i class="bi bi-grid-fill"></i></span>
                                     <span class="sidebar-link-text">Dashboard</span>
                                 </div>
                             </a>
-                            <a href="{{ Route::has('kasir.kasir') ? route('kasir.kasir') : url('/kasir') }}" 
-                               class="sidebar-link {{ request()->is('kasir*') ? 'active' : '' }}">
+                        </li>
+
+                        <!-- Menu Kasir (POS) -->
+                        <li class="sidebar-item">
+                            <a href="{{ Route::has('kasir.kasir') ? route('kasir.kasir') : url('/kasir/kasir') }}" 
+                               class="sidebar-link {{ request()->routeIs('kasir.kasir*') ? 'active' : '' }}">
                                 <div class="sidebar-link-content">
                                     <span class="sidebar-link-icon"><i class="bi bi-calculator"></i></span>
                                     <span class="sidebar-link-text">Menu Kasir (POS)</span>
@@ -1178,16 +1182,6 @@
                     <button type="button" class="btn-toggle-sidebar" id="sidebarToggle" title="Toggle Sidebar">
                         <i class="bi bi-list"></i>
                     </button>
-
-                    <!-- Search Input (Invenza Pill Search) -->
-                    <div class="nav-search-container d-none d-sm-block">
-                        <i class="bi bi-search nav-search-icon"></i>
-                        <input type="text" 
-                               class="nav-search-input" 
-                               placeholder="Search products, customers, invoices..." 
-                               id="globalSearchInput">
-                        <kbd class="nav-search-kbd">/</kbd>
-                    </div>
                 </div>
 
                 <div class="navbar-right">
@@ -1231,20 +1225,6 @@
                                 </a>
                             </li>
                         </ul>
-                    </div>
-
-                    <!-- User Profile Dropdown -->
-                    <div class="dropdown">
-                        <a href="#" class="user-nav-dropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <div class="user-nav-avatar">
-                                {{ $userInitials }}
-                            </div>
-                            <div class="user-nav-text">
-                                <span class="user-nav-name">{{ $userName }}</span>
-                                <span class="user-nav-role">{{ $userRoleLabel }}</span>
-                            </div>
-                        </a>                        
-                    </div>
                 </div>
             </header>
 
