@@ -234,7 +234,7 @@
             <button type="button" class="btn-print" onclick="window.print()">
                 <i class="bi bi-printer-fill"></i> Cetak Struk
             </button>
-            <a href="{{ route('kasir.kasir') }}" class="btn-close-window">
+            <a href="{{ ($transaksi->user?->role === 'admin' && Route::has('admin.kasir.index')) ? route('admin.kasir.index') : route('kasir.kasir') }}" class="btn-close-window">
                 Kembali ke Kasir
             </a>
         </div>

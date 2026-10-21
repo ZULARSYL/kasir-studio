@@ -161,7 +161,9 @@ class KasirController extends Controller
             'catatan_buka' => $validated['catatan_buka'] ?? null,
         ]);
 
-        return redirect()->route('kasir.kasir')
+        $redirectRoute = Auth::user()->role === 'admin' ? 'admin.kasir.index' : 'kasir.kasir';
+
+        return redirect()->route($redirectRoute)
             ->with('success', 'Shift kasir berhasil dibuka dengan modal awal Rp ' . number_format($shift->modal_awal, 0, ',', '.') . '. Selamat bertugas!');
     }
 
@@ -172,9 +174,10 @@ class KasirController extends Controller
     {
         $user = Auth::user();
         $shift = KasirShift::getActiveShift($user->id);
+        $redirectRoute = Auth::user()->role === 'admin' ? 'admin.kasir.index' : 'kasir.kasir';
 
         if (! $shift) {
-            return redirect()->route('kasir.kasir')
+            return redirect()->route($redirectRoute)
                 ->with('error', 'Tidak ada shift kasir yang sedang aktif.');
         }
 
@@ -190,7 +193,7 @@ class KasirController extends Controller
             'catatan_tutup' => $validated['catatan_tutup'] ?? null,
         ]);
 
-        return redirect()->route('kasir.kasir')
+        return redirect()->route($redirectRoute)
             ->with('success', 'Shift kasir telah ditutup. Laporan penjualan harian telah tersimpan dengan aman.');
     }
 

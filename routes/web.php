@@ -171,26 +171,31 @@ Route::middleware(['auth', 'role:admin'])
             Route::get('pengeluaran/list', [\App\Http\Controllers\Keuangan\PengeluaranController::class, 'index'])->name('pengeluaran.index');
         });
 
-        // Keuangan (Pemasukan & Pengeluaran)
-        Route::prefix('keuangan')->name('keuangan.')->group(function () {
-            // Pemasukan Manual
-            Route::resource('pemasukan', \App\Http\Controllers\Keuangan\PemasukanController::class)->except(['create', 'show', 'edit']);
-            Route::get('pemasukan', [\App\Http\Controllers\Keuangan\PemasukanController::class, 'index'])->name('pemasukan');
-            Route::get('pemasukan/list', [\App\Http\Controllers\Keuangan\PemasukanController::class, 'index'])->name('pemasukan.index');
-
-            // Pengeluaran Operasional
-            Route::resource('pengeluaran', \App\Http\Controllers\Keuangan\PengeluaranController::class)->except(['create', 'show', 'edit']);
-            Route::get('pengeluaran', [\App\Http\Controllers\Keuangan\PengeluaranController::class, 'index'])->name('pengeluaran');
-            Route::get('pengeluaran/list', [\App\Http\Controllers\Keuangan\PengeluaranController::class, 'index'])->name('pengeluaran.index');
+        // Menu Kasir POS (Mode Darurat Admin)
+        Route::prefix('kasir')->name('kasir.')->group(function () {
+            Route::get('/', [KasirController::class, 'index'])->name('index');
+            Route::post('/shift/buka', [KasirController::class, 'bukaShift'])->name('shift.buka');
+            Route::post('/shift/tutup', [KasirController::class, 'tutupShift'])->name('shift.tutup');
+            Route::post('/cek-promo', [KasirController::class, 'cekPromo'])->name('cek-promo');
+            Route::post('/checkout', [KasirController::class, 'checkout'])->name('checkout');
+            Route::get('/struk/{id}', [KasirController::class, 'struk'])->name('struk');
         });
     });
 
+// Dashboard Kasir (Khusus Role Kasir)
 Route::middleware(['auth', 'role:kasir'])
     ->prefix('kasir')
     ->name('kasir.')
     ->group(function () {
         Route::get('/', [\App\Http\Controllers\Kasir\KasirDashboardController::class, 'index'])->name('index');
         Route::get('/dashboard', [\App\Http\Controllers\Kasir\KasirDashboardController::class, 'index'])->name('dashboard');
+    });
+
+// Transaksi POS Kasir (Dapat Diakses Kasir dan Admin Saat Urgent Mode)
+Route::middleware(['auth', 'role:admin,kasir'])
+    ->prefix('kasir')
+    ->name('kasir.')
+    ->group(function () {
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir');
         Route::post('/shift/buka', [KasirController::class, 'bukaShift'])->name('shift.buka');
         Route::post('/shift/tutup', [KasirController::class, 'tutupShift'])->name('shift.tutup');
