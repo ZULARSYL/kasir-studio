@@ -56,21 +56,37 @@
                                 </div>
                             </div>
 
-                            <!-- Pilih Outlet Cabang -->
-                            <div class="mb-3">
-                                <label class="form-label small fw-semibold text-muted">Pilih Outlet Cabang <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-shop"></i></span>
-                                    <select name="toko_cabang_id" class="form-select border-start-0" required>
-                                        <option value="" disabled selected>-- Pilih Cabang Penugasan --</option>
-                                        @foreach($cabangs as $cabang)
-                                            <option value="{{ $cabang->id }}" {{ old('toko_cabang_id') == $cabang->id ? 'selected' : '' }}>
-                                                {{ $cabang->nama_cabang }} - {{ $cabang->alamat }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                            @if(auth()->user()->toko_cabang_id && auth()->user()->tokoCabang)
+                                <!-- Outlet Cabang Terkunci Sesuai Penugasan Akun User -->
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-muted">Outlet Penugasan Kasir</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-success"><i class="bi bi-shop"></i></span>
+                                        <input type="text" class="form-control bg-light border-start-0 fw-bold text-dark" 
+                                               value="{{ auth()->user()->tokoCabang->nama_cabang }} - {{ auth()->user()->tokoCabang->alamat }}" readonly>
+                                        <input type="hidden" name="toko_cabang_id" value="{{ auth()->user()->toko_cabang_id }}">
+                                    </div>
+                                    <div class="form-text text-muted small mt-1">
+                                        <i class="bi bi-check-circle-fill text-success me-1"></i>Outlet otomatis ditetapkan sesuai penempatan akun kasir Anda.
+                                    </div>
                                 </div>
-                            </div>
+                            @else
+                                <!-- Pilih Outlet Cabang (Jika belum ditentukan di pengaturan user) -->
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-muted">Pilih Outlet Cabang <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-shop"></i></span>
+                                        <select name="toko_cabang_id" class="form-select border-start-0" required>
+                                            <option value="" disabled selected>-- Pilih Cabang Penugasan --</option>
+                                            @foreach($cabangs as $cabang)
+                                                <option value="{{ $cabang->id }}" {{ old('toko_cabang_id') == $cabang->id ? 'selected' : '' }}>
+                                                    {{ $cabang->nama_cabang }} - {{ $cabang->alamat }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            @endif
 
                             <!-- Modal Awal Kas -->
                             <div class="mb-3">
@@ -463,6 +479,26 @@
                         <input type="text" id="inputNamaPelanggan" class="form-control rounded-3" placeholder="Pelanggan Umum" value="Pelanggan Umum">
                     </div>
 
+                    <!-- Input Jumlah Penonton dalam Room -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-semibold text-muted mb-0">
+                                <i class="bi bi-people-fill text-primary me-1"></i>Jumlah Penonton dalam Room <span class="text-danger">*</span>
+                            </label>
+                            <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.72rem;">
+                                Standar: 2 Org
+                            </span>
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <button type="button" class="btn btn-outline-secondary px-3" id="btnMinusPenonton" title="Kurangi Penonton">-</button>
+                            <input type="number" id="inputJumlahPenonton" class="form-control text-center fw-bold font-monospace fs-6" value="2" min="1" max="50">
+                            <button type="button" class="btn btn-outline-secondary px-3" id="btnPlusPenonton" title="Tambah Penonton">+</button>
+                        </div>
+                        <div class="small mt-1 text-muted" id="infoDendaPenonton" style="font-size: 0.75rem;">
+                            <i class="bi bi-info-circle text-primary me-1"></i>Maksimal 2 orang gratis denda. Lebih dari 2 orang dikenakan biaya tambahan Rp 5.000 / orang.
+                        </div>
+                    </div>
+
                     <!-- CURRENT CART HEADER (Sesuai sidebar/kasir.png) -->
                     <div class="d-flex justify-content-between align-items-center mb-3 pt-2 border-top">
                         <h6 class="fw-bold text-dark mb-0 fs-6">Current Cart</h6>
@@ -528,6 +564,14 @@
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="text-muted fw-medium small">Subtotal</span>
                             <span class="fw-bold text-dark font-monospace" id="labelSubtotal">Rp 0</span>
+                        </div>
+
+                        <!-- Biaya Tambahan Penonton (>2 orang) -->
+                        <div class="d-flex justify-content-between align-items-center mb-2 text-danger small" id="rowDendaPenonton" style="display: none;">
+                            <span>
+                                <i class="bi bi-person-plus-fill me-1"></i>Tambahan Penonton (<span id="labelExtraPenonton">0</span> org x Rp 5.000)
+                            </span>
+                            <span class="font-monospace fw-bold" id="labelDendaPenonton">+ Rp 0</span>
                         </div>
 
                         <!-- Voucher Promo Section -->
@@ -618,6 +662,79 @@
                     <i class="bi bi-cart3"></i>
                     <span>Lihat Pesanan & Bayar</span>
                 </button>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalKonfirmasiPembayaran" tabindex="-1" aria-labelledby="modalKonfirmasiPembayaranLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-bottom">
+                        <h5 class="modal-title fw-bold text-dark" id="modalKonfirmasiPembayaranLabel">
+                            <i class="bi bi-receipt-cutoff text-emerald me-2"></i>Konfirmasi Pesanan
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="d-flex justify-content-between gap-3 mb-3 small">
+                            <span class="text-muted">Nama pelanggan</span>
+                            <strong class="text-dark text-end" id="konfirmasiNamaPelanggan">-</strong>
+                        </div>
+                        <div class="d-flex justify-content-between gap-3 mb-3 small">
+                            <span class="text-muted">Jumlah penonton</span>
+                            <strong class="text-dark text-end"><span id="konfirmasiJumlahPenonton">2</span> orang</strong>
+                        </div>
+                        <div class="table-responsive border rounded-3">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Pesanan</th>
+                                        <th class="text-center">Qty</th>
+                                        <th class="text-end pe-3">Jumlah</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="konfirmasiDaftarPesanan"></tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3 pt-2 border-top">
+                            <div class="d-flex justify-content-between small mb-2">
+                                <span class="text-muted">Subtotal item</span>
+                                <span class="font-monospace" id="konfirmasiSubtotal">Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between small mb-2 text-danger d-none" id="konfirmasiBarisDenda">
+                                <span>Tambahan penonton (<span id="konfirmasiJumlahDenda">0</span> orang)</span>
+                                <span class="font-monospace" id="konfirmasiDenda">Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between small mb-2 text-success d-none" id="konfirmasiBarisDiskon">
+                                <span>Diskon promo <span id="konfirmasiNamaPromo"></span></span>
+                                <span class="font-monospace" id="konfirmasiDiskon">- Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold fs-5 pt-2 mt-2 border-top">
+                                <span>Total</span>
+                                <span class="font-monospace text-emerald" id="konfirmasiTotal">Rp 0</span>
+                            </div>
+                        </div>
+                        <div class="bg-light rounded-3 p-3 mt-3 small">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Metode pembayaran</span>
+                                <strong id="konfirmasiMetodePembayaran">-</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Uang diterima</span>
+                                <strong class="font-monospace" id="konfirmasiUangDiterima">Rp 0</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Kembalian</span>
+                                <strong class="font-monospace" id="konfirmasiKembalian">Rp 0</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top">
+                        <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal">Periksa Kembali</button>
+                        <button type="button" class="btn btn-emerald rounded-3 px-4 fw-bold" id="btnKonfirmasiPembayaran">
+                            <i class="bi bi-printer-fill me-1"></i>Konfirmasi Bayar & Cetak
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -931,6 +1048,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const orderState = {
         film: null,       // { id, judul, durasi, harga, poster, sku }
         room: null,       // { id, nama, kapasitas }
+        jumlahPenonton: 2,
+        dendaPenonton: 0,
         cafeItems: {},    // key: barang_id, value: { barang_id, nama, satuan_id, satuan, qty, harga_satuan, stok }
         promo: null,      // { id, nama, diskon }
         metodeBayarId: null,
@@ -944,6 +1063,52 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function parseRupiah(value) {
         return Number(String(value || '').replace(/\D/g, '')) || 0;
+    }
+
+    // -------------------------------------------------------------
+    // INPUT JUMLAH PENONTON & HITUNG DENDA
+    // -------------------------------------------------------------
+    const inputJumlahPenonton = document.getElementById('inputJumlahPenonton');
+    const btnMinusPenonton = document.getElementById('btnMinusPenonton');
+    const btnPlusPenonton = document.getElementById('btnPlusPenonton');
+
+    function updatePenonton() {
+        let val = parseInt(inputJumlahPenonton ? inputJumlahPenonton.value : 2, 10);
+        if (isNaN(val) || val < 1) val = 1;
+        if (inputJumlahPenonton) inputJumlahPenonton.value = val;
+        orderState.jumlahPenonton = val;
+
+        // Aturan: Penonton > 2 dikenakan denda Rp 5.000 / orang lebih
+        if (val > 2) {
+            orderState.dendaPenonton = (val - 2) * 5000;
+        } else {
+            orderState.dendaPenonton = 0;
+        }
+
+        renderCart();
+    }
+
+    if (btnMinusPenonton) {
+        btnMinusPenonton.addEventListener('click', function () {
+            let val = parseInt(inputJumlahPenonton ? inputJumlahPenonton.value : 2, 10) || 1;
+            if (val > 1) {
+                inputJumlahPenonton.value = val - 1;
+                updatePenonton();
+            }
+        });
+    }
+
+    if (btnPlusPenonton) {
+        btnPlusPenonton.addEventListener('click', function () {
+            let val = parseInt(inputJumlahPenonton ? inputJumlahPenonton.value : 2, 10) || 1;
+            inputJumlahPenonton.value = val + 1;
+            updatePenonton();
+        });
+    }
+
+    if (inputJumlahPenonton) {
+        inputJumlahPenonton.addEventListener('input', updatePenonton);
+        inputJumlahPenonton.addEventListener('change', updatePenonton);
     }
 
     // -------------------------------------------------------------
@@ -1198,7 +1363,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (orderState.room) {
             cartRoom.style.setProperty('display', 'flex', 'important');
             document.getElementById('cartRoomNama').textContent = orderState.room.nama;
-            document.getElementById('cartRoomKapasitas').textContent = `Kapasitas: ${orderState.room.kapasitas} Org`;
+            document.getElementById('cartRoomKapasitas').textContent = `Kapasitas: ${orderState.room.kapasitas} Org • ${orderState.jumlahPenonton} Penonton`;
             totalItemsCount += 1;
         } else {
             cartRoom.style.setProperty('display', 'none', 'important');
@@ -1289,8 +1454,30 @@ document.addEventListener('DOMContentLoaded', function () {
             cartEmpty.style.display = hasAnyItem ? 'none' : 'block';
         }
 
+        // Biaya Tambahan Penonton (Denda jika > 2 orang)
+        const dendaPenonton = orderState.dendaPenonton || 0;
+        const rowDenda = document.getElementById('rowDendaPenonton');
+        const labelDenda = document.getElementById('labelDendaPenonton');
+        const labelExtra = document.getElementById('labelExtraPenonton');
+        const infoDenda = document.getElementById('infoDendaPenonton');
+
+        if (orderState.jumlahPenonton > 2) {
+            const extra = orderState.jumlahPenonton - 2;
+            if (rowDenda) rowDenda.style.setProperty('display', 'flex', 'important');
+            if (labelExtra) labelExtra.textContent = extra;
+            if (labelDenda) labelDenda.textContent = `+ ${formatRupiah(dendaPenonton)}`;
+            if (infoDenda) {
+                infoDenda.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Dikenakan tambahan ${extra} orang x Rp 5.000 = ${formatRupiah(dendaPenonton)}</span>`;
+            }
+        } else {
+            if (rowDenda) rowDenda.style.setProperty('display', 'none', 'important');
+            if (infoDenda) {
+                infoDenda.innerHTML = `<i class="bi bi-info-circle text-primary me-1"></i>Maksimal 2 orang gratis denda. Lebih dari 2 orang dikenakan biaya tambahan Rp 5.000 / orang.`;
+            }
+        }
+
         // Kalkulasi Total
-        const kotor = subtotalFilm + subtotalCafe;
+        const kotor = subtotalFilm + dendaPenonton + subtotalCafe;
         let diskon = 0;
         if (orderState.promo) {
             diskon = orderState.promo.diskon || 0;
@@ -1349,6 +1536,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const subtotalKotor = (orderState.film ? orderState.film.harga : 0) + 
+                (orderState.dendaPenonton || 0) +
                 Object.values(orderState.cafeItems).reduce((acc, curr) => acc + (curr.qty * curr.harga_satuan), 0);
 
             if (subtotalKotor <= 0) {
@@ -1397,9 +1585,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function getTotalTagihanAngka() {
         const subtotalFilm = orderState.film ? orderState.film.harga : 0;
+        const dendaPenonton = orderState.dendaPenonton || 0;
         const subtotalCafe = Object.values(orderState.cafeItems).reduce((acc, curr) => acc + (curr.qty * curr.harga_satuan), 0);
         const diskon = orderState.promo ? orderState.promo.diskon : 0;
-        return Math.max(0, subtotalFilm + subtotalCafe - diskon);
+        return Math.max(0, subtotalFilm + dendaPenonton + subtotalCafe - diskon);
     }
 
     function updateKembalian(totalTagihan) {
@@ -1456,6 +1645,9 @@ document.addEventListener('DOMContentLoaded', function () {
         orderState.room = null;
         orderState.cafeItems = {};
         orderState.promo = null;
+        orderState.jumlahPenonton = 2;
+        orderState.dendaPenonton = 0;
+        if (inputJumlahPenonton) inputJumlahPenonton.value = 2;
         if (inputUangDiterima) inputUangDiterima.value = '';
         if (inputKodePromo) inputKodePromo.value = '';
         if (promoFeedbackMsg) promoFeedbackMsg.textContent = '';
@@ -1499,6 +1691,71 @@ document.addEventListener('DOMContentLoaded', function () {
     // CHECKOUT & BAYAR & CETAK STRUK
     // -------------------------------------------------------------
     const btnCheckoutBayar = document.getElementById('btnCheckoutBayar');
+    const modalKonfirmasiElement = document.getElementById('modalKonfirmasiPembayaran');
+    const modalKonfirmasiPembayaran = modalKonfirmasiElement && typeof bootstrap !== 'undefined'
+        ? bootstrap.Modal.getOrCreateInstance(modalKonfirmasiElement)
+        : null;
+    const btnKonfirmasiPembayaran = document.getElementById('btnKonfirmasiPembayaran');
+    let pendingCheckoutPayload = null;
+
+    function isiRingkasanKonfirmasi(totalTagihan, uangDiterima, namaMetode) {
+        const daftarPesanan = document.getElementById('konfirmasiDaftarPesanan');
+        daftarPesanan.replaceChildren();
+
+        function tambahBaris(nama, qty, jumlah) {
+            const row = document.createElement('tr');
+            const namaCell = document.createElement('td');
+            const qtyCell = document.createElement('td');
+            const jumlahCell = document.createElement('td');
+
+            namaCell.className = 'ps-3';
+            namaCell.textContent = nama;
+            qtyCell.className = 'text-center font-monospace';
+            qtyCell.textContent = qty;
+            jumlahCell.className = 'text-end pe-3 font-monospace';
+            jumlahCell.textContent = jumlah;
+            row.append(namaCell, qtyCell, jumlahCell);
+            daftarPesanan.appendChild(row);
+        }
+
+        const subtotalCafe = Object.values(orderState.cafeItems)
+            .reduce((subtotal, item) => subtotal + (item.qty * item.harga_satuan), 0);
+        const subtotalItem = (orderState.film ? orderState.film.harga : 0) + subtotalCafe;
+
+        tambahBaris(`Film: ${orderState.film.judul} (${orderState.film.durasi} menit)`, 1, formatRupiah(orderState.film.harga));
+        tambahBaris(`Room: ${orderState.room.nama}`, 1, 'Termasuk');
+        Object.values(orderState.cafeItems).forEach(item => {
+            tambahBaris(item.nama, `${item.qty} ${item.satuan}`, formatRupiah(item.qty * item.harga_satuan));
+        });
+
+        document.getElementById('konfirmasiNamaPelanggan').textContent =
+            document.getElementById('inputNamaPelanggan')?.value.trim() || 'Walk-in Customer (Guest)';
+        document.getElementById('konfirmasiJumlahPenonton').textContent = orderState.jumlahPenonton;
+        document.getElementById('konfirmasiSubtotal').textContent = formatRupiah(subtotalItem);
+        document.getElementById('konfirmasiTotal').textContent = formatRupiah(totalTagihan);
+        document.getElementById('konfirmasiMetodePembayaran').textContent = namaMetode;
+        document.getElementById('konfirmasiUangDiterima').textContent = formatRupiah(uangDiterima);
+        document.getElementById('konfirmasiKembalian').textContent = formatRupiah(Math.max(0, uangDiterima - totalTagihan));
+
+        const barisDenda = document.getElementById('konfirmasiBarisDenda');
+        const jumlahDenda = Math.max(0, orderState.jumlahPenonton - 2);
+        barisDenda.classList.toggle('d-none', orderState.dendaPenonton <= 0);
+        document.getElementById('konfirmasiJumlahDenda').textContent = jumlahDenda;
+        document.getElementById('konfirmasiDenda').textContent = formatRupiah(orderState.dendaPenonton);
+
+        const barisDiskon = document.getElementById('konfirmasiBarisDiskon');
+        const diskon = orderState.promo ? orderState.promo.diskon : 0;
+        barisDiskon.classList.toggle('d-none', diskon <= 0);
+        document.getElementById('konfirmasiNamaPromo').textContent = orderState.promo ? `(${orderState.promo.nama})` : '';
+        document.getElementById('konfirmasiDiskon').textContent = `- ${formatRupiah(diskon)}`;
+    }
+
+    if (modalKonfirmasiElement) {
+        modalKonfirmasiElement.addEventListener('hidden.bs.modal', function () {
+            pendingCheckoutPayload = null;
+        });
+    }
+
     if (btnCheckoutBayar) {
         btnCheckoutBayar.addEventListener('click', function () {
             if (!orderState.film) {
@@ -1534,6 +1791,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const payload = {
                 film_id: orderState.film.id,
                 room_id: orderState.room.id,
+                jumlah_penonton: orderState.jumlahPenonton || 2,
                 tipe_pembayaran_id: tipePembayaranId,
                 nama_pelanggan: document.getElementById('inputNamaPelanggan')?.value || 'Walk-in Customer (Guest)',
                 promo_id: orderState.promo ? orderState.promo.id : null,
@@ -1546,6 +1804,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 }))
             };
 
+            if (!modalKonfirmasiPembayaran) {
+                alert('Modal konfirmasi pembayaran tidak dapat dibuka. Silakan muat ulang halaman.');
+                return;
+            }
+
+            pendingCheckoutPayload = payload;
+            isiRingkasanKonfirmasi(totalTagihan, uangDiterima, selectedOpt ? selectedOpt.textContent.trim() : '-');
+            modalKonfirmasiPembayaran.show();
+        });
+    }
+
+    if (btnKonfirmasiPembayaran) {
+        btnKonfirmasiPembayaran.addEventListener('click', function () {
+            if (!pendingCheckoutPayload) return;
+
+            const payload = pendingCheckoutPayload;
+            pendingCheckoutPayload = null;
+            btnKonfirmasiPembayaran.disabled = true;
+            btnKonfirmasiPembayaran.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span>Memproses Pembayaran...`;
             btnCheckoutBayar.disabled = true;
             btnCheckoutBayar.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span>Memproses Pembayaran...`;
 
@@ -1561,8 +1838,11 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 btnCheckoutBayar.disabled = false;
                 btnCheckoutBayar.innerHTML = `<i class="bi bi-printer-fill fs-5"></i><span>Bayar & Cetak Struk</span>`;
+                btnKonfirmasiPembayaran.disabled = false;
+                btnKonfirmasiPembayaran.innerHTML = `<i class="bi bi-printer-fill me-1"></i>Konfirmasi Bayar & Cetak`;
 
                 if (data.status === 'success') {
+                    modalKonfirmasiPembayaran.hide();
                     // Buka popup cetak struk thermal
                     const strukUrl = `{{ url('/kasir/struk') }}/${data.transaksi_id}`;
                     const printWindow = window.open(strukUrl, '_blank', 'width=420,height=600,scrollbars=yes');
@@ -1580,6 +1860,8 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(err => {
                 btnCheckoutBayar.disabled = false;
                 btnCheckoutBayar.innerHTML = `<i class="bi bi-printer-fill fs-5"></i><span>Bayar & Cetak Struk</span>`;
+                btnKonfirmasiPembayaran.disabled = false;
+                btnKonfirmasiPembayaran.innerHTML = `<i class="bi bi-printer-fill me-1"></i>Konfirmasi Bayar & Cetak`;
                 alert('Gagal memproses checkout pembayaran. Silakan periksa koneksi atau coba lagi.');
             });
         });

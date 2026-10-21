@@ -341,4 +341,145 @@ class KasirPosTest extends TestCase
         $nextResponse->assertOk();
         $nextResponse->assertSee('Buka Shift Kasir Hari Ini');
     }
+
+    /**
+     * Test kasir yang sudah ditetapkan toko cabangnya otomatis menggunakan outlet tersebut saat buka shift.
+     */
+    public function test_kasir_with_assigned_outlet_automatically_opens_shift_without_dropdown(): void
+    {
+        $cabang = TokoCabang::first();
+        $kasir = User::create([
+            'name' => 'Kasir Cabang Khusus',
+            'username' => 'kasir_cabang_khusus',
+            'password' => Hash::make('password123'),
+            'role' => 'kasir',
+            'toko_cabang_id' => $cabang->id,
+        ]);
+
+        // Saat mengakses kasir, kasir melihat outlet yang sudah ditetapkan secara otomatis
+        $response = $this->actingAs($kasir)->get(route('kasir.kasir'));
+        $response->assertOk();
+        $response->assertSee($cabang->nama_cabang);
+        $response->assertSee('Outlet otomatis ditetapkan');
+
+        // Buka shift tanpa mengirimkan toko_cabang_id dari form dropdown
+        $bukaResponse = $this->actingAs($kasir)->post(route('kasir.shift.buka'), [
+            'modal_awal' => 150000,
+            'catatan_buka' => 'Buka kasir dengan outlet bawaan user',
+        ]);
+
+        $bukaResponse->assertRedirect(route('kasir.kasir'));
+        $bukaResponse->assertSessionHas('success');
+
+        $this->assertDatabaseHas('kasir_shifts', [
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 150000,
+            'status' => 'buka',
+        ]);
+    }
+
+    /**
+     * Test checkout dengan jumlah penonton lebih dari 2 orang dikenakan denda Rp 5.000 per orang.
+     */
+    public function test_kasir_checkout_with_extra_penonton_calculates_denda_correctly(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+        $shift = KasirShift::create([
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 100000,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+
+        $film = Film::create([
+            'judul' => 'Avatar Way of Water',
+            'durasi_menit' => 180,
+            'harga_per_menit' => 500,
+            'total_harga' => 50000,
+            'status' => 'tersedia',
+        ]);
+
+        $room = Room::create([
+            'toko_cabang_id' => $cabang->id,
+            'nama' => 'Studio Deluxe 01',
+            'kapasitas' => 8,
+        ]);
+
+        $metodeBayar = TipePembayaran::first();
+
+        // KASUS 1: 2 Penonton -> Tanpa Denda (denda = 0)
+        $checkoutData2 = [
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'jumlah_penonton' => 2,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+            'nama_pelanggan' => 'Pasangan Penonton',
+            'uang_diterima' => 50000,
+            'cafe_items' => [],
+        ];
+        $res2 = $this->actingAs($kasir)->postJson(route('kasir.checkout'), $checkoutData2);
+        $res2->assertOk();
+        $this->assertDatabaseHas('transaksis', [
+            'id' => $res2->json('transaksi_id'),
+            'jumlah_penonton' => 2,
+            'denda_penonton' => 0,
+            'subtotal_film_room' => 50000,
+            'total_bayar' => 50000,
+        ]);
+
+        // KASUS 2: 3 Penonton -> 1 orang lebih -> Denda Rp 5.000
+        $checkoutData3 = [
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'jumlah_penonton' => 3,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+            'nama_pelanggan' => 'Tiga Sahabat',
+            'uang_diterima' => 60000,
+            'cafe_items' => [],
+        ];
+        $res3 = $this->actingAs($kasir)->postJson(route('kasir.checkout'), $checkoutData3);
+        $res3->assertOk();
+        $this->assertDatabaseHas('transaksis', [
+            'id' => $res3->json('transaksi_id'),
+            'jumlah_penonton' => 3,
+            'denda_penonton' => 5000,
+            'subtotal_film_room' => 55000, // 50.000 + 5.000
+            'total_bayar' => 55000,
+        ]);
+
+        // KASUS 3: 5 Penonton -> 3 orang lebih -> Denda 3 x Rp 5.000 = Rp 15.000
+        $checkoutData5 = [
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'jumlah_penonton' => 5,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+            'nama_pelanggan' => 'Grup Rombongan 5 Orang',
+            'uang_diterima' => 100000,
+            'cafe_items' => [],
+        ];
+        $res5 = $this->actingAs($kasir)->postJson(route('kasir.checkout'), $checkoutData5);
+        $res5->assertOk();
+        $transaksiId5 = $res5->json('transaksi_id');
+
+        $this->assertDatabaseHas('transaksis', [
+            'id' => $transaksiId5,
+            'jumlah_penonton' => 5,
+            'denda_penonton' => 15000,
+            'subtotal_film_room' => 65000, // 50.000 + 15.000
+            'total_bayar' => 65000,
+            'uang_diterima' => 100000,
+            'kembalian' => 35000,
+        ]);
+
+        // Cek cetak struk untuk kasus 5 penonton
+        $strukRes = $this->actingAs($kasir)->get(route('kasir.struk', $transaksiId5));
+        $strukRes->assertOk();
+        $strukRes->assertSee('5 Orang');
+        $strukRes->assertSee('Extra +Rp 15.000');
+        $strukRes->assertSee('Rp 65.000');
+    }
 }
+

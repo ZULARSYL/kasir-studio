@@ -50,8 +50,45 @@
          2. FOUR METRIC KPI CARDS (MATCHING ADMIN DASHBOARD)
     ---------------------------------------------------- -->
     <div class="row g-3 g-xl-4 mb-4">
+        <!-- 1. Total Transaksi Hari Ini -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="metric-icon-box bg-emerald-light text-emerald">
+                        <i class="bi bi-cart-check-fill"></i>
+                    </div>
+                    <span class="badge bg-emerald-subtle text-emerald rounded-pill px-2.5 py-1 fw-semibold font-sm">
+                        Today
+                    </span>
+                </div>
+                <div class="metric-value font-monospace">{{ number_format($totalTransaksiToday, 0, ',', '.') }}</div>
+                <div class="metric-label mb-2">TOTAL TRANSAKSI HARI INI</div>
+                <div class="metric-progress-wrapper">
+                    <div class="metric-progress-bar bg-emerald" style="width: {{ min(100, $totalTransaksiToday * 10) }}%;"></div>
+                </div>
+            </div>
+        </div>
 
-        <!-- 1. Room Terpakai & Tersedia -->
+        <!-- 2. Omzet Penjualan Hari Ini -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="metric-icon-box bg-blue-light text-blue">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <span class="badge bg-blue-subtle text-blue rounded-pill px-2.5 py-1 fw-semibold font-sm">
+                        Revenue
+                    </span>
+                </div>
+                <div class="metric-value font-monospace">Rp {{ number_format($totalPendapatanToday, 0, ',', '.') }}</div>
+                <div class="metric-label mb-2">OMZET PENJUALAN HARI INI</div>
+                <div class="metric-progress-wrapper">
+                    <div class="metric-progress-bar bg-blue" style="width: {{ min(100, $totalPendapatanToday > 0 ? 75 : 0) }}%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Room Terpakai & Tersedia -->
         <div class="col-sm-6 col-xl-3">
             <div class="metric-card">
                 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -73,7 +110,7 @@
             </div>
         </div>
 
-        <!-- 2. Item Cafe / F&B Terjual -->
+        <!-- 4. Item Cafe / F&B Terjual -->
         <div class="col-sm-6 col-xl-3">
             <div class="metric-card">
                 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -85,7 +122,7 @@
                     </span>
                 </div>
                 <div class="metric-value font-monospace">{{ number_format($totalCafeQtyToday, 0, ',', '.') }} <span class="fs-6 text-muted fw-normal">Item</span></div>
-                <div class="metric-label mb-2">PRODUK CAFE TERJUAL</div>
+                <div class="metric-label mb-2">PRODUK CAFE TERJUAL HARI INI</div>
                 <div class="metric-progress-wrapper">
                     <div class="metric-progress-bar bg-amber" style="width: {{ min(100, $totalCafeQtyToday * 6) }}%;"></div>
                 </div>

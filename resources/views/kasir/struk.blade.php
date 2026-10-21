@@ -159,6 +159,7 @@
         </div>
         <div style="font-size: 10px; color: #475569; margin-left: 4px; margin-bottom: 6px;">
             <div>• Room: <strong>{{ $transaksi->room->nama ?? '-' }}</strong> (Kap: {{ $transaksi->room->kapasitas ?? '-' }} org)</div>
+            <div>• Penonton: {{ $transaksi->jumlah_penonton ?? 1 }} Orang @if(($transaksi->denda_penonton ?? 0) > 0) <span style="color: #dc2626;">(Extra +Rp {{ number_format($transaksi->denda_penonton, 0, ',', '.') }})</span> @endif</div>
             <div>• Durasi: {{ $transaksi->durasi_menit }} Menit</div>
         </div>
 

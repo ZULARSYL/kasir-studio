@@ -39,6 +39,7 @@ class KasirController extends Controller
                 'hasActiveShift' => false,
                 'activeShift' => null,
                 'cabangs' => $cabangs,
+                'assignedCabang' => $user->tokoCabang,
             ]);
         }
 
@@ -128,6 +129,13 @@ class KasirController extends Controller
      */
     public function bukaShift(Request $request)
     {
+        $user = Auth::user();
+
+        // Jika user kasir sudah memiliki penugasan outlet (toko_cabang_id), otomatis gunakan itu
+        if ($user->toko_cabang_id) {
+            $request->merge(['toko_cabang_id' => $user->toko_cabang_id]);
+        }
+
         $validated = $request->validate([
             'toko_cabang_id' => 'required|exists:toko_cabang,id',
             'modal_awal' => 'required|numeric|min:0',
@@ -248,6 +256,7 @@ class KasirController extends Controller
             'film_id' => 'required|exists:films,id',
             'room_id' => 'required|exists:rooms,id',
             'tipe_pembayaran_id' => 'required|exists:tipe_pembayarans,id',
+            'jumlah_penonton' => 'nullable|integer|min:1',
             'nama_pelanggan' => 'nullable|string|max:100',
             'promo_id' => 'nullable|exists:promos,id',
             'uang_diterima' => 'nullable|numeric|min:0',
@@ -262,12 +271,17 @@ class KasirController extends Controller
             $film = Film::findOrFail($validated['film_id']);
             $room = Room::findOrFail($validated['room_id']);
 
-            // 1. Hitung biaya Film & Room
+            // 1. Hitung biaya Film & Room serta denda jika penonton > 2 orang
             $hargaFilm = (float) $film->total_harga > 0 
                 ? (float) $film->total_harga 
                 : ((float) $film->harga_per_menit * (int) $film->durasi_menit);
             $hargaRoom = 0; // Biaya room include dalam paket film
-            $subtotalFilmRoom = $hargaFilm + $hargaRoom;
+
+            // Aturan Penonton: Standar 2 orang. Jika penonton > 2, dikenakan denda Rp 5.000 / orang lebih
+            $jumlahPenonton = max(1, (int) ($validated['jumlah_penonton'] ?? 1));
+            $dendaPenonton = $jumlahPenonton > 2 ? ($jumlahPenonton - 2) * 5000 : 0;
+
+            $subtotalFilmRoom = $hargaFilm + $hargaRoom + $dendaPenonton;
 
             // 2. Hitung Pesanan Cafe & Makanan
             $subtotalCafe = 0;
@@ -327,6 +341,8 @@ class KasirController extends Controller
                 'promo_id' => $promoId,
                 'nama_pelanggan' => $validated['nama_pelanggan'] ?? 'Pelanggan Umum',
                 'durasi_menit' => $film->durasi_menit,
+                'jumlah_penonton' => $jumlahPenonton,
+                'denda_penonton' => $dendaPenonton,
                 'harga_film' => $hargaFilm,
                 'harga_room' => $hargaRoom,
                 'subtotal_film_room' => $subtotalFilmRoom,
