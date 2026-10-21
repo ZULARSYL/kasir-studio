@@ -1190,42 +1190,61 @@
                         <i class="bi bi-moon-stars" id="themeIcon"></i>
                     </button>
 
-                    <!-- Notification Bell with Red Dot -->
-                    <div class="dropdown">
-                        <button type="button" class="nav-action-btn" data-bs-toggle="dropdown" aria-expanded="false" title="Notifikasi">
+                    <!-- Notification Bell with Role-Based Notifications -->
+                    <div class="dropdown" id="notificationDropdownContainer">
+                        <button type="button" class="nav-action-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" title="Notifikasi" id="notificationDropdownBtn">
                             <i class="bi bi-bell"></i>
-                            <span class="notification-badge-dot"></span>
+                            @if(($appNotifications['unread_count'] ?? 0) > 0)
+                                <span class="notification-badge-dot" id="notificationBadgeDot"></span>
+                            @endif
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-3 mt-2" style="width: 320px;">
-                            <li class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="fw-bold mb-0 text-dark">Notifikasi</h6>
-                                <span class="badge bg-success-subtle text-success rounded-pill px-2">2 Baru</span>
-                            </li>
-                            <li><hr class="dropdown-divider my-2"></li>
-                            <li>
-                                <a class="dropdown-item d-flex gap-3 align-items-start p-2 rounded-3" href="#">
-                                    <div class="p-2 rounded-circle bg-warning-subtle text-warning flex-shrink-0">
-                                        <i class="bi bi-exclamation-triangle"></i>
+                        <div class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-0 mt-2 overflow-hidden" style="width: 460px; max-width: 92vw; overflow-x: hidden;">
+                            <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="fw-bold mb-0 text-dark">
+                                        <i class="bi bi-bell-fill text-primary me-1"></i>Notifikasi
+                                    </h6>
+                                    <span class="badge {{ ($appNotifications['unread_count'] ?? 0) > 0 ? 'bg-danger' : 'bg-secondary' }} rounded-pill px-2" id="notificationBadgeCount">
+                                        {{ $appNotifications['unread_count'] ?? 0 }} Baru
+                                    </span>
+                                </div>
+                                @if(($appNotifications['unread_count'] ?? 0) > 0)
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-muted small" id="btnMarkAllRead" title="Tandai semua dibaca">
+                                        <i class="bi bi-check2-all me-1"></i>Tandai Dibaca
+                                    </button>
+                                @endif
+                            </div>
+                            <div class="notification-scroll-box" style="max-height: 380px; overflow-y: auto; overflow-x: hidden;">
+                                @forelse($appNotifications['items'] ?? [] as $notif)
+                                    <a href="{{ $notif['url'] }}"
+                                       class="dropdown-item d-flex gap-3 align-items-start p-3 border-bottom text-wrap notification-item {{ !$notif['is_read'] ? 'bg-light-subtle' : '' }}"
+                                       data-id="{{ $notif['id'] }}">
+                                        <div class="p-2 rounded-circle {{ $notif['icon_bg'] }} flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                                            <i class="bi {{ $notif['icon'] }} fs-5"></i>
+                                        </div>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="d-flex justify-content-between align-items-start mb-1 gap-2">
+                                                <span class="fw-bold text-heading small text-truncate {{ !$notif['is_read'] ? 'text-primary' : '' }}" style="min-width: 0;">{{ $notif['title'] }}</span>
+                                                <span class="badge {{ $notif['badge_class'] }} rounded-pill flex-shrink-0 text-nowrap" style="font-size: 0.65rem;">{{ $notif['badge_text'] }}</span>
+                                            </div>
+                                            <div class="text-muted small lh-sm mb-1 text-break" style="font-size: 0.8rem;">{{ $notif['message'] }}</div>
+                                        </div>
+                                    </a>
+                                @empty
+                                    <div class="text-center py-4 px-3 text-muted">
+                                        <i class="bi bi-bell-slash fs-1 text-muted opacity-50 mb-2 d-block"></i>
+                                        <div class="small fw-semibold">Tidak ada notifikasi baru</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">Semua aktivitas sistem dalam keadaan terkendali.</div>
                                     </div>
-                                    <div>
-                                        <div class="fw-semibold text-dark small">Stok Cafe Menipis</div>
-                                        <div class="text-muted small">5 item cafe berada di bawah batas minimum stok.</div>
-                                    </div>
+                                @endforelse
+                            </div>
+                            <div class="p-2 bg-light border-top text-center">
+                                <a href="{{ route('notifikasi.index') }}" class="btn btn-sm btn-link text-decoration-none fw-semibold small text-primary w-100">
+                                    Lihat Semua Notifikasi <i class="bi bi-arrow-right ms-1"></i>
                                 </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item d-flex gap-3 align-items-start p-2 rounded-3 mt-1" href="#">
-                                    <div class="p-2 rounded-circle bg-primary-subtle text-primary flex-shrink-0">
-                                        <i class="bi bi-door-open"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-semibold text-dark small">Room Studio 03 Selesai</div>
-                                        <div class="text-muted small">Durasi sewa 2 jam telah berakhir.</div>
-                                    </div>
-                                </a>
-                            </li>
-                        </ul>
-                </div>
+                            </div>
+                        </div>
+                    </div>
             </header>
 
             <!-- Main App Content Yield -->
@@ -1349,6 +1368,57 @@
                     const trigger = document.querySelector(`[href="#${el.id}"]`);
                     if (trigger) {
                         trigger.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            });
+
+            // 5. Interaksi Notifikasi (Tandai Semua Dibaca)
+            const btnMarkAll = document.getElementById('btnMarkAllRead');
+            if (btnMarkAll) {
+                btnMarkAll.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    fetch('{{ route("notifikasi.mark-all-read") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken || ''
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        const dot = document.getElementById('notificationBadgeDot');
+                        if (dot) dot.remove();
+                        const badgeCount = document.getElementById('notificationBadgeCount');
+                        if (badgeCount) {
+                            badgeCount.className = 'badge bg-secondary rounded-pill px-2';
+                            badgeCount.textContent = '0 Baru';
+                        }
+                        btnMarkAll.remove();
+                        document.querySelectorAll('.notification-item').forEach(item => {
+                            item.classList.remove('bg-light-subtle');
+                            const title = item.querySelector('.text-primary');
+                            if (title) title.classList.remove('text-primary');
+                        });
+                    })
+                    .catch(() => {});
+                });
+            }
+
+            // Tandai per item notifikasi saat diklik
+            document.querySelectorAll('.notification-item').forEach(item => {
+                item.addEventListener('click', function () {
+                    const id = this.getAttribute('data-id');
+                    if (id) {
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                        fetch(`{{ url('/notifikasi/mark-read') }}/${encodeURIComponent(id)}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken || ''
+                            }
+                        }).catch(() => {});
                     }
                 });
             });
