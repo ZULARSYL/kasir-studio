@@ -20,7 +20,7 @@
         </div>
         <div>
             <a href="{{ route('admin.laporan.stok.export', request()->all()) }}"
-               class="btn btn-emerald px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2">
+               class="btn btn-success px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2">
                 <i class="bi bi-file-earmark-excel fs-5"></i>
                 <span class="fw-semibold">Ekspor Excel</span>
             </a>
@@ -122,7 +122,7 @@
 
     <!-- Quick Stats Cards (Grand Total & Metrics) -->
     <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 mb-4">
-        <!-- 1. Grand Total Nilai Aset -->
+        <!-- 1. Total Nilai Aset -->
         <div class="col">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white p-3 border-start border-4 border-success">
                 <div class="d-flex align-items-center gap-3">
@@ -130,11 +130,10 @@
                         <i class="bi bi-cash-stack fs-3"></i>
                     </div>
                     <div class="overflow-hidden">
-                        <div class="text-muted small fw-semibold text-uppercase">Grand Total Nilai Aset</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Total Nilai Aset</div>
                         <h4 class="fw-bold text-success font-monospace mb-0 text-truncate">
                             Rp {{ number_format($grandTotalAset, 0, ',', '.') }}
                         </h4>
-                        <span class="text-muted small">Total Nilai Seluruh Stok</span>
                     </div>
                 </div>
             </div>
@@ -148,17 +147,16 @@
                         <i class="bi bi-boxes fs-3"></i>
                     </div>
                     <div class="overflow-hidden">
-                        <div class="text-muted small fw-semibold text-uppercase">Grand Total Kuantitas</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Kuantitas Stok</div>
                         <h4 class="fw-bold text-primary font-monospace mb-0 text-truncate">
                             {{ number_format($grandTotalStok, 0, ',', '.') }} Unit
                         </h4>
-                        <span class="text-muted small">Banyaknya Stok Fisik</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 3. Total Jenis Barang -->
+        <!-- 3. Total Barang -->
         <div class="col">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white p-3 border-start border-4 border-info">
                 <div class="d-flex align-items-center gap-3">
@@ -166,11 +164,10 @@
                         <i class="bi bi-tag-fill fs-3"></i>
                     </div>
                     <div class="overflow-hidden">
-                        <div class="text-muted small fw-semibold text-uppercase">Total Jenis Barang</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Total Barang</div>
                         <h4 class="fw-bold text-dark font-monospace mb-0 text-truncate">
                             {{ $totalJenisBarang }} Item
                         </h4>
-                        <span class="text-muted small">Varian Produk Berbeda</span>
                     </div>
                 </div>
             </div>
@@ -184,11 +181,10 @@
                         <i class="bi bi-buildings-fill fs-3"></i>
                     </div>
                     <div class="overflow-hidden">
-                        <div class="text-muted small fw-semibold text-uppercase">Outlet / Cabang</div>
+                        <div class="text-muted small fw-semibold text-uppercase">Outlet</div>
                         <h4 class="fw-bold text-dark font-monospace mb-0 text-truncate">
                             {{ $totalOutlet }} Outlet
                         </h4>
-                        <span class="text-muted small">{{ $namaCabang }}</span>
                     </div>
                 </div>
             </div>
@@ -216,11 +212,10 @@
                         <th class="ps-4 text-muted small fw-bold" style="width: 60px;">NO</th>
                         <th class="text-muted small fw-bold">NAMA BARANG</th>
                         <th class="text-muted small fw-bold">KATEGORI</th>
-                        <th class="text-muted small fw-bold">OUTLET CABANG</th>
+                        <th class="text-muted small fw-bold">OUTLET</th>
                         <th class="text-muted small fw-bold">SATUAN</th>
-                        <th class="text-center text-muted small fw-bold">BANYAKNYA STOK DI SISTEM</th>
-                        <th class="text-end text-muted small fw-bold">HARGA MODAL (RATA-RATA)</th>
-                        <th class="text-end pe-4 text-muted small fw-bold">TOTAL ASET PER ITEM</th>
+                        <th class="text-center text-muted small fw-bold">STOK</th>
+                        <th class="text-end pe-4 text-muted small fw-bold">TOTAL ASET</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -254,12 +249,9 @@
                                     </span>
                                 @else
                                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold font-monospace fs-6">
-                                        0 (Habis)
+                                        0
                                     </span>
                                 @endif
-                            </td>
-                            <td class="text-end font-monospace">
-                                Rp {{ number_format($item->avg_harga_awal, 0, ',', '.') }}
                             </td>
                             <td class="text-end pe-4 font-monospace fw-bold text-success fs-6">
                                 Rp {{ number_format($item->total_asset_item, 0, ',', '.') }}
@@ -285,9 +277,6 @@
                             </td>
                             <td class="text-center py-3 text-primary font-monospace fs-6">
                                 {{ number_format($grandTotalStok, 0, ',', '.') }} Unit
-                            </td>
-                            <td class="text-end py-3 text-muted small">
-                                Total Aset:
                             </td>
                             <td class="text-end pe-4 py-3 text-success font-monospace fs-5">
                                 Rp {{ number_format($grandTotalAset, 0, ',', '.') }}

@@ -20,7 +20,7 @@
         </div>
         <div>
             <a href="{{ route('admin.laporan.laba-rugi.export', request()->all()) }}"
-               class="btn btn-primary px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2">
+               class="btn btn-success px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2">
                 <i class="bi bi-file-earmark-excel fs-5"></i>
                 <span class="fw-semibold">Ekspor Excel</span>
             </a>
@@ -108,11 +108,11 @@
 
                     <!-- Tombol Terapkan & Reset -->
                     <div class="col-12 col-lg-2 d-flex gap-2">
-                        <button type="submit" class="btn btn-brand rounded-3 flex-fill py-2 shadow-sm d-flex align-items-center justify-content-center gap-1">
+                        <button type="submit" class="btn btns-sm btn-primary rounded-3 flex-fill py-2 shadow-sm d-flex align-items-center justify-content-center gap-1">
                             <i class="bi bi-funnel-fill"></i>
                             <span>Terapkan</span>
                         </button>
-                        <a href="{{ route('admin.laporan.laba-rugi') }}" class="btn btn-outline-secondary rounded-3 px-3 py-2" title="Reset Filter">
+                        <a href="{{ route('admin.laporan.laba-rugi') }}" class="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2" title="Reset Filter">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </a>
                     </div>
