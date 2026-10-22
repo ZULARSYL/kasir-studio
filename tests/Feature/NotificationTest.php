@@ -89,7 +89,7 @@ class NotificationTest extends TestCase
             'toko_cabang_id' => $cabang->id,
             'modal_awal' => 250000,
             'status' => 'buka',
-            'waktu_buka' => now()->subHours(2),
+            'waktu_buka' => now()->startOfDay()->addMinutes(10),
         ]);
 
         // 2. Kasir tutup shift hari ini (Fitur Tutup Kasir)
@@ -108,8 +108,8 @@ class NotificationTest extends TestCase
             'modal_akhir' => 1200000,
             'total_penjualan' => 1000000,
             'status' => 'tutup',
-            'waktu_buka' => now()->subHours(8),
-            'waktu_tutup' => now()->subMinutes(15),
+            'waktu_buka' => now()->startOfDay()->addMinutes(15),
+            'waktu_tutup' => now()->startOfDay()->addMinutes(30),
         ]);
 
         // 3. Stok cafe menipis kurang dari 10 (< 10)
