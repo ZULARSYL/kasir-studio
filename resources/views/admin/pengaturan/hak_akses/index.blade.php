@@ -66,15 +66,19 @@
         <div class="row g-3 align-items-center">
             
             <!-- Tombol Navigasi Tipe (Role vs Jabatan) -->
-            {{-- <div class="col-12 col-md-5 col-lg-4">
+            <div class="col-12 col-md-5 col-lg-4">
                 <label class="form-label small fw-semibold text-muted mb-1.5">Pilih Kategori Otoritas</label>
                 <div class="btn-group w-100" role="group">
+                    <a href="{{ route('admin.pengaturan.hak-akses', ['tipe' => 'role', 'role' => 'admin']) }}" 
+                       class="btn {{ $tipe === 'role' ? 'btn-primary' : 'btn-outline-secondary' }} rounded-start-3 fw-semibold">
+                        <i class="bi bi-person-gear me-1"></i> Berdasarkan Role
+                    </a>
                     <a href="{{ route('admin.pengaturan.hak-akses', ['tipe' => 'jabatan']) }}" 
                        class="btn {{ $tipe === 'jabatan' ? 'btn-primary' : 'btn-outline-secondary' }} rounded-end-3 fw-semibold">
-                        <i class="bi bi-briefcase me-1"></i> Berdasarkan JabatEan
+                        <i class="bi bi-briefcase me-1"></i> Berdasarkan Jabatan
                     </a>
                 </div>
-            </div> --}}
+            </div>
 
             <!-- Selector Detail Target -->
             <div class="col-12 col-md-7 col-lg-8">
