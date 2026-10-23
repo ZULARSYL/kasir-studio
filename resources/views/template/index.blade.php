@@ -978,15 +978,6 @@
                                             </a>
                                         </li>
                                     @endif
-                                    @if ($authUser?->canAccessMenu('master.harga-perdurasi'))
-                                        <li class="sidebar-submenu-item">
-                                            <a href="{{ Route::has('admin.master.harga-perdurasi') ? route('admin.master.harga-perdurasi') : url('/admin/master/harga-perdurasi') }}" 
-                                               class="sidebar-submenu-link {{ request()->is('admin/master/harga-perdurasi*') ? 'active' : '' }}">
-                                                <i class="bi bi-clock-history"></i>
-                                                <span>Harga Perdurasi</span>
-                                            </a>
-                                        </li>
-                                    @endif
                                     @if ($authUser?->canAccessMenu('master.toko-cabang'))
                                         <li class="sidebar-submenu-item">
                                             <a href="{{ Route::has('admin.master.toko-cabang') ? route('admin.master.toko-cabang') : url('/admin/master/toko-cabang') }}" 

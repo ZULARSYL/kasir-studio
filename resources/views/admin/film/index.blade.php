@@ -111,6 +111,7 @@
                         <th class="text-muted small fw-bold">TARIF / MENIT</th>
                         <th class="text-muted small fw-bold">TOTAL HARGA</th>
                         <th class="text-muted small fw-bold">STATUS</th>
+                        <th class="text-muted small fw-bold">LIMIT ROOM</th>
                         <th class="text-end pe-4 text-muted small fw-bold" style="width: 140px;">AKSI</th>
                     </tr>
                 </thead>
@@ -163,6 +164,22 @@
                             <td>
                                 {!! $film->status_badge !!}
                             </td>
+                            <td>
+                                <div class="d-flex flex-column gap-1">
+                                    <span class="badge bg-light text-dark border px-2 py-1 font-monospace fw-bold">
+                                        <i class="bi bi-door-open-fill text-emerald me-1"></i>Max {{ $film->limit_penggunaan ?? 1 }} Room
+                                    </span>
+                                    @if($film->sisa_slot > 0)
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small" style="font-size: 0.72rem;">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Sisa {{ $film->sisa_slot }} Slot
+                                        </span>
+                                    @else
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small" style="font-size: 0.72rem;">
+                                            <i class="bi bi-x-circle-fill me-1"></i>Slot Penuh ({{ $film->limit_penggunaan }}/{{ $film->limit_penggunaan }})
+                                        </span>
+                                    @endif
+                                </div>
+                            </td>
                             <td class="text-end pe-4">
                                 <div class="btn-group btn-group-sm">
                                     <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalDetailFilm{{ $film->id }}" title="Detail Film" aria-label="Lihat detail film {{ $film->judul }}">
@@ -211,14 +228,22 @@
                                                     </select>
                                                 </div>
 
-                                                <!-- Sutradara & Tahun Rilis -->
-                                                <div class="col-md-7">
+                                                <!-- Sutradara, Tahun Rilis & Limit Penggunaan (Stok Room) -->
+                                                <div class="col-md-5">
                                                     <label class="form-label small fw-semibold">Sutradara</label>
                                                     <input type="text" name="sutradara" class="form-control rounded-3" value="{{ $film->sutradara }}" placeholder="Contoh: Christopher Nolan">
                                                 </div>
-                                                <div class="col-md-5">
+                                                <div class="col-md-3">
                                                     <label class="form-label small fw-semibold">Tahun Rilis</label>
                                                     <input type="number" name="tahun_rilis" class="form-control rounded-3" value="{{ $film->tahun_rilis }}" min="1900" max="2099" placeholder="2024">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label small fw-semibold">Limit Room (Stok) <span class="text-danger">*</span></label>
+                                                    <div class="input-group">
+                                                        <input type="number" name="limit_penggunaan" class="form-control rounded-start" min="1" max="100" value="{{ $film->limit_penggunaan ?? 1 }}" required>
+                                                        <span class="input-group-text bg-light text-muted small">Room</span>
+                                                    </div>
+                                                    <small class="text-muted d-block" style="font-size: 0.72rem;">Maksimal room bersamaan</small>
                                                 </div>
 
                                                 <!-- Durasi & Harga per Menit (Auto-Calculated) -->
@@ -344,7 +369,7 @@
                         </div>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center py-5">
+                            <td colspan="10" class="text-center py-5">
                                 <div class="text-muted mb-2"><i class="bi bi-camera-reels fs-1"></i></div>
                                 <h6 class="fw-bold text-dark">Belum ada koleksi film</h6>
                                 <p class="text-muted small">Tambahkan film bioskop studio dengan durasi, cover, dan multi-genre sekarang.</p>
@@ -395,6 +420,19 @@
                                 <dd class="col-sm-7">{{ $film->tahun_rilis ?: '-' }}</dd>
                                 <dt class="col-sm-5 text-muted">Durasi</dt>
                                 <dd class="col-sm-7">{{ $film->durasi_formatted }}</dd>
+                                <dt class="col-sm-5 text-muted">Limit Room (Stok)</dt>
+                                <dd class="col-sm-7">
+                                    <strong class="text-dark">{{ $film->limit_penggunaan ?? 1 }} Room Bersamaan</strong>
+                                    @if($film->sisa_slot > 0)
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1 small">
+                                            Tersedia {{ $film->sisa_slot }} Slot
+                                        </span>
+                                    @else
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill ms-1 small">
+                                            Penuh (0 Slot)
+                                        </span>
+                                    @endif
+                                </dd>
                                 <dt class="col-sm-5 text-muted">Tarif per Menit</dt>
                                 <dd class="col-sm-7">{{ $film->harga_per_menit_format }}</dd>
                                 <dt class="col-sm-5 text-muted">Total Harga</dt>
@@ -459,14 +497,22 @@
                             </select>
                         </div>
 
-                        <!-- Sutradara & Tahun Rilis -->
-                        <div class="col-md-7">
+                        <!-- Sutradara, Tahun Rilis & Limit Penggunaan (Stok Room) -->
+                        <div class="col-md-5">
                             <label class="form-label small fw-semibold">Sutradara</label>
                             <input type="text" name="sutradara" class="form-control rounded-3" placeholder="Nama sutradara">
                         </div>
-                        <div class="col-md-5">
+                        <div class="col-md-3">
                             <label class="form-label small fw-semibold">Tahun Rilis</label>
                             <input type="number" name="tahun_rilis" class="form-control rounded-3" min="1900" max="2099" value="{{ date('Y') }}" placeholder="2024">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Limit Room (Stok) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" name="limit_penggunaan" class="form-control rounded-start" min="1" max="100" value="5" placeholder="5" required>
+                                <span class="input-group-text bg-light text-muted small">Room</span>
+                            </div>
+                            <small class="text-muted d-block" style="font-size: 0.72rem;">Maksimal room bersamaan</small>
                         </div>
 
                         <!-- Durasi & Harga per Menit (Auto-Calculated) -->

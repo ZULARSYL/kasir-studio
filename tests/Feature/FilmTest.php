@@ -4,8 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Film;
 use App\Models\GenreFilm;
+use App\Models\KasirShift;
+use App\Models\Room;
+use App\Models\TipePembayaran;
+use App\Models\TokoCabang;
+use App\Models\Transaksi;
 use App\Models\User;
 use App\Services\ImageCompressionService;
+use Carbon\Carbon;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -81,6 +87,7 @@ class FilmTest extends TestCase
             'tahun_rilis' => 2024,
             'usia_rating' => '17+',
             'durasi_menit' => 120,
+            'limit_penggunaan' => 5,
             'harga_per_menit' => 500,
             'sinopsis' => 'Kisah lucu dan seram di sebuah bioskop tua.',
             'status' => 'tersedia',
@@ -94,6 +101,7 @@ class FilmTest extends TestCase
         $this->assertDatabaseHas('films', [
             'judul' => 'Komedi Horor Malam Jumat',
             'durasi_menit' => 120,
+            'limit_penggunaan' => 5,
             'harga_per_menit' => 500,
             'total_harga' => 60000,
             'status' => 'tersedia',
@@ -119,6 +127,7 @@ class FilmTest extends TestCase
         $data = [
             'judul' => 'Film Aksi Spektakuler',
             'durasi_menit' => 90,
+            'limit_penggunaan' => 3,
             'harga_per_menit' => 600,
             'usia_rating' => '13+',
             'status' => 'tersedia',
@@ -152,6 +161,7 @@ class FilmTest extends TestCase
         $data = [
             'judul' => 'Film Percobaan Hacking File',
             'durasi_menit' => 100,
+            'limit_penggunaan' => 5,
             'harga_per_menit' => 500,
             'usia_rating' => 'SU',
             'status' => 'tersedia',
@@ -177,6 +187,7 @@ class FilmTest extends TestCase
         $tamperedGenreData = [
             'judul' => 'Film Uji Tamper Genre',
             'durasi_menit' => 100,
+            'limit_penggunaan' => 5,
             'harga_per_menit' => 500,
             'usia_rating' => 'SU',
             'status' => 'tersedia',
@@ -189,6 +200,7 @@ class FilmTest extends TestCase
         $tamperedStatusData = [
             'judul' => 'Film Uji Tamper Status',
             'durasi_menit' => 100,
+            'limit_penggunaan' => 5,
             'harga_per_menit' => 500,
             'usia_rating' => 'SU',
             'status' => 'status_palsu_devtools', // Nilai manipulasi devtools
@@ -201,6 +213,7 @@ class FilmTest extends TestCase
         $tamperedUsiaData = [
             'judul' => 'Film Uji Tamper Rating Usia',
             'durasi_menit' => 100,
+            'limit_penggunaan' => 5,
             'harga_per_menit' => 500,
             'usia_rating' => '99+', // Nilai manipulasi devtools
             'status' => 'tersedia',
@@ -232,6 +245,7 @@ class FilmTest extends TestCase
         $updateData = [
             'judul' => 'Film Updated Title',
             'durasi_menit' => 90,
+            'limit_penggunaan' => 4,
             'harga_per_menit' => 500, // 90 * 500 = 45000
             'usia_rating' => '13+',
             'status' => 'tersedia',
@@ -245,6 +259,7 @@ class FilmTest extends TestCase
             'id' => $film->id,
             'judul' => 'Film Updated Title',
             'durasi_menit' => 90,
+            'limit_penggunaan' => 4,
             'harga_per_menit' => 500,
             'total_harga' => 45000,
             'usia_rating' => '13+',
@@ -265,6 +280,7 @@ class FilmTest extends TestCase
         $film = Film::create([
             'judul' => 'Film Akan Dihapus',
             'durasi_menit' => 60,
+            'limit_penggunaan' => 2,
             'harga_per_menit' => 400,
             'total_harga' => 24000,
             'usia_rating' => 'SU',
@@ -277,5 +293,99 @@ class FilmTest extends TestCase
 
         $this->assertDatabaseMissing('films', ['id' => $film->id]);
         $this->assertDatabaseMissing('film_genre', ['film_id' => $film->id]);
+    }
+
+    /**
+     * Test fitur limit penggunaan film seperti stok room bersamaan.
+     */
+    public function test_film_concurrent_room_limit_and_slot_availability(): void
+    {
+        $admin = $this->getAdmin();
+        $cabang = TokoCabang::first();
+        $metodeBayar = TipePembayaran::first();
+
+        // 1. Buat Film dengan Limit Penggunaan = 2 Room Bersamaan
+        $film = Film::create([
+            'judul' => 'Avatar: The Way of Water',
+            'durasi_menit' => 120,
+            'limit_penggunaan' => 2,
+            'harga_per_menit' => 500,
+            'total_harga' => 60000,
+            'status' => 'tersedia',
+        ]);
+
+        $room1 = Room::create(['toko_cabang_id' => $cabang->id, 'nama' => 'Studio 1', 'kapasitas' => 4]);
+        $room2 = Room::create(['toko_cabang_id' => $cabang->id, 'nama' => 'Studio 2', 'kapasitas' => 4]);
+        $room3 = Room::create(['toko_cabang_id' => $cabang->id, 'nama' => 'Studio 3', 'kapasitas' => 4]);
+
+        $shift = KasirShift::create([
+            'user_id' => $admin->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 200000,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+
+        // Kondisi Awal: Belum ada room yang menggunakan film
+        $this->assertSame(0, $film->getActiveRoomsCount());
+        $this->assertSame(2, $film->sisa_slot);
+        $this->assertTrue($film->isAvailableForBooking());
+
+        // Transaksi 1: Room 1 memesan film ini (Durasi 120 menit)
+        $response1 = $this->actingAs($admin)->postJson(route('admin.kasir.checkout'), [
+            'film_id' => $film->id,
+            'room_id' => $room1->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+        ]);
+        $response1->assertOk();
+        $this->assertSame('success', $response1->json('status'));
+
+        // Cek slot setelah 1 room aktif
+        $this->assertSame(1, $film->getActiveRoomsCount());
+        $this->assertSame(1, $film->sisa_slot);
+        $this->assertTrue($film->isAvailableForBooking());
+
+        // Transaksi 2: Room 2 memesan film yang sama (Limit 2 tercapai!)
+        $response2 = $this->actingAs($admin)->postJson(route('admin.kasir.checkout'), [
+            'film_id' => $film->id,
+            'room_id' => $room2->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+        ]);
+        $response2->assertOk();
+        $this->assertSame('success', $response2->json('status'));
+
+        // Cek status slot: sekarang 2 dari 2 terpakai, sisa 0 slot
+        $this->assertSame(2, $film->getActiveRoomsCount());
+        $this->assertSame(0, $film->sisa_slot);
+        $this->assertFalse($film->isAvailableForBooking());
+
+        // Transaksi 3: Room 3 mencoba memesan film yang sama saat slot penuh -> HARUS DITOLAK 422
+        $response3 = $this->actingAs($admin)->postJson(route('admin.kasir.checkout'), [
+            'film_id' => $film->id,
+            'room_id' => $room3->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+        ]);
+        $response3->assertStatus(422);
+        $this->assertStringContainsString('sedang mencapai batas maksimal', $response3->json('message'));
+
+        // Simulasi: Sesi Room 1 telah selesai menonton (mundurkan waktu transaksi room 1 lebih dari 120 menit yang lalu)
+        $trx1 = Transaksi::where('room_id', $room1->id)->first();
+        $trx1->update([
+            'waktu_transaksi' => Carbon::now()->subMinutes(125),
+        ]);
+
+        // Cek kembali: Slot kembali bertambah 1 karena Room 1 sudah selesai!
+        $this->assertSame(1, $film->getActiveRoomsCount());
+        $this->assertSame(1, $film->sisa_slot);
+        $this->assertTrue($film->isAvailableForBooking());
+
+        // Sekarang Room 3 dapat memesan film tersebut dengan sukses!
+        $response4 = $this->actingAs($admin)->postJson(route('admin.kasir.checkout'), [
+            'film_id' => $film->id,
+            'room_id' => $room3->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+        ]);
+        $response4->assertOk();
+        $this->assertSame('success', $response4->json('status'));
     }
 }

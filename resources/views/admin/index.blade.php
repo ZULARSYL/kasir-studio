@@ -53,7 +53,7 @@
                         {{ $filmSalesGrowth >= 0 ? '+' : '' }}{{ $filmSalesGrowth }}%
                     </span>
                 </div>
-                <div class="metric-label mb-3">PENJUALAN FILM PER BULAN</div>
+                <div class="metric-label mb-3">JUMLAH PENJUALAN FILM / BULAN</div>
                 <div class="metric-value  mb-2">{{ number_format($jumlahPenjualanFilm) }} <span class="fs-6 fw-semibold text-muted">Tiket</span></div>
                 <div class="small text-muted mb-3 d-flex justify-content-between align-items-center">
                     <span>{{ number_format($totalPenontonFilm) }} Penonton</span>
@@ -76,7 +76,7 @@
                         <i class="bi bi-tag-fill me-1"></i>{{ $jumlahKategoriCafe }} Kategori
                     </span>
                 </div>
-                <div class="metric-label mb-3">JUMLAH BARANG</div>
+                <div class="metric-label mb-3">JUMLAH BARANG DI CAFE</div>
                 <div class="metric-value  mb-2">{{ number_format($jumlahBarangCafe) }} <span class="fs-6 fw-semibold text-muted">Produk</span></div>
                 <div class="small text-muted mb-3 d-flex justify-content-between align-items-center">
                     <span>Stok Fisik:</span>
@@ -148,7 +148,7 @@
                     <i class="bi bi-activity"></i>
                 </div>
                 <div>
-                    <h5 class="panel-card-title mb-0">Sales Statistics</h5>
+                    <h5 class="panel-card-title mb-0">Sales Statistics Area Chart</h5>
                 </div>
             </div>
 
@@ -181,6 +181,7 @@
                     <div class="d-flex align-items-center gap-2">
                         <span class="outlet-legend-dot bg-brand-primary shadow-xs"></span>
                         <div>
+                            <span class="text-muted small d-block" style="font-size: 0.75rem;">Garis 1 (Outlet A):</span>
                             <strong class="text-heading small d-block">{{ $namaOutletA }}</strong>
                             <span class="fw-bold text-primary font-monospace" id="chartOutletASummary">
                                 {{ $chartData['perbulan']['total_a_formatted'] }}
@@ -194,6 +195,7 @@
                     <div class="d-flex align-items-center gap-2">
                         <span class="outlet-legend-dot bg-amber shadow-xs"></span>
                         <div>
+                            <span class="text-muted small d-block" style="font-size: 0.75rem;">Garis 2 (Outlet B):</span>
                             <strong class="text-heading small d-block">{{ $namaOutletB }}</strong>
                             <span class="fw-bold text-amber font-monospace" id="chartOutletBSummary">
                                 {{ $chartData['perbulan']['total_b_formatted'] }}

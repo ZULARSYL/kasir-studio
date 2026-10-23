@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Barang;
 use App\Models\GenreFilm;
-use App\Models\HargaPerdurasi;
 use App\Models\Jabatan;
 use App\Models\JenisBiaya;
 use App\Models\MenuCafe;
@@ -43,7 +42,6 @@ class MasterDataTest extends TestCase
 
         $routes = [
             'admin.master.tipe-pembayaran.index',
-            'admin.master.harga-perdurasi.index',
             'admin.master.toko-cabang.index',
             'admin.master.room.index',
             'admin.master.promo.index',
@@ -84,57 +82,6 @@ class MasterDataTest extends TestCase
         $response = $this->actingAs($admin)->delete(route('admin.master.tipe-pembayaran.destroy', $item->id));
         $response->assertRedirect(route('admin.master.tipe-pembayaran.index'));
         $this->assertDatabaseMissing('tipe_pembayarans', ['id' => $item->id]);
-    }
-
-    public function test_harga_perdurasi_crud_operations(): void
-    {
-        $admin = $this->getAdmin();
-
-        // 1. Store
-        $postData = [
-            'nama' => 'Paket Hemat Siang',
-            'durasi_menit' => 60,
-            'kalkulasi_harga' => 50000,
-        ];
-        $response = $this->actingAs($admin)->post(route('admin.master.harga-perdurasi.store'), $postData);
-        $response->assertRedirect(route('admin.master.harga-perdurasi.index'));
-        $this->assertDatabaseHas('harga_perdurasi', [
-            'nama' => 'Paket Hemat Siang',
-            'durasi' => '60 Menit',
-            'kalkulasi_harga' => 50000,
-        ]);
-
-        $item = HargaPerdurasi::where('nama', 'Paket Hemat Siang')->first();
-        $this->assertSame('Rp 833,33', $item->harga_per_menit_format);
-        $legacyItem = new HargaPerdurasi([
-            'durasi' => '1 Jam (60 Menit)',
-            'kalkulasi_harga' => 50000,
-        ]);
-        $this->assertSame(60, $legacyItem->durasi_menit);
-        $this->assertSame('Rp 833,33', $legacyItem->harga_per_menit_format);
-        $this->actingAs($admin)
-            ->get(route('admin.master.harga-perdurasi.index'))
-            ->assertOk()
-            ->assertSee('HARGA PER MENIT')
-            ->assertSee('Rp 833,33');
-
-        // 2. Update
-        $response = $this->actingAs($admin)->put(route('admin.master.harga-perdurasi.update', $item->id), [
-            'nama' => 'Paket Hemat Sore',
-            'durasi_menit' => 60,
-            'kalkulasi_harga' => 85000,
-        ]);
-        $response->assertRedirect(route('admin.master.harga-perdurasi.index'));
-        $this->assertDatabaseHas('harga_perdurasi', [
-            'nama' => 'Paket Hemat Sore',
-            'durasi' => '60 Menit',
-            'kalkulasi_harga' => 85000,
-        ]);
-
-        // 3. Destroy
-        $response = $this->actingAs($admin)->delete(route('admin.master.harga-perdurasi.destroy', $item->id));
-        $response->assertRedirect(route('admin.master.harga-perdurasi.index'));
-        $this->assertDatabaseMissing('harga_perdurasi', ['id' => $item->id]);
     }
 
     public function test_room_crud_operations(): void

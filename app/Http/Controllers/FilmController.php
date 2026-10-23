@@ -69,6 +69,7 @@ class FilmController extends Controller
         $validated = $request->validate([
             'judul' => 'required|string|max:255',
             'durasi_menit' => 'required|integer|min:1|max:1440',
+            'limit_penggunaan' => 'required|integer|min:1|max:100',
             'harga_per_menit' => 'required|numeric|min:0',
             'tahun_rilis' => 'nullable|integer|min:1900|max:2099',
             'sutradara' => 'nullable|string|max:255',
@@ -119,6 +120,7 @@ class FilmController extends Controller
                 'poster' => $posterPath,
                 'sinopsis' => $validated['sinopsis'] ?? null,
                 'durasi_menit' => $durasiMenit,
+                'limit_penggunaan' => (int) ($validated['limit_penggunaan'] ?? 1),
                 'harga_per_menit' => $hargaPerMenit,
                 'total_harga' => $totalHarga,
                 'tahun_rilis' => $validated['tahun_rilis'] ?? null,
@@ -145,6 +147,7 @@ class FilmController extends Controller
         $validated = $request->validate([
             'judul' => 'required|string|max:255',
             'durasi_menit' => 'required|integer|min:1|max:1440',
+            'limit_penggunaan' => 'required|integer|min:1|max:100',
             'harga_per_menit' => 'required|numeric|min:0',
             'tahun_rilis' => 'nullable|integer|min:1900|max:2099',
             'sutradara' => 'nullable|string|max:255',
@@ -199,6 +202,7 @@ class FilmController extends Controller
                 'poster' => $posterPath,
                 'sinopsis' => $validated['sinopsis'] ?? null,
                 'durasi_menit' => $durasiMenit,
+                'limit_penggunaan' => (int) ($validated['limit_penggunaan'] ?? 1),
                 'harga_per_menit' => $hargaPerMenit,
                 'total_harga' => $totalHarga,
                 'tahun_rilis' => $validated['tahun_rilis'] ?? null,

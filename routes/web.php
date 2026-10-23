@@ -8,7 +8,6 @@ use App\Http\Controllers\FilmController;
 use App\Http\Controllers\Kasir\KasirController;
 use App\Http\Controllers\Master\BarangController;
 use App\Http\Controllers\Master\GenreFilmController;
-use App\Http\Controllers\Master\HargaPerdurasiController;
 use App\Http\Controllers\Master\JabatanController;
 use App\Http\Controllers\Master\JenisBiayaController;
 use App\Http\Controllers\Master\MenuCafeController;
@@ -69,11 +68,7 @@ Route::middleware(['auth', 'role:admin', 'menu.access'])
             Route::get('tipe-pembayaran', [TipePembayaranController::class, 'index'])->name('tipe-pembayaran');
             Route::resource('tipe-pembayaran', TipePembayaranController::class);
 
-            // 2. Harga Perdurasi
-            Route::get('harga-perdurasi', [HargaPerdurasiController::class, 'index'])->name('harga-perdurasi');
-            Route::resource('harga-perdurasi', HargaPerdurasiController::class);
-
-            // 3. Toko Cabang
+            // 2. Toko Cabang
             Route::get('toko-cabang', [TokoCabangController::class, 'index'])->name('toko-cabang');
             Route::resource('toko-cabang', TokoCabangController::class);
 
