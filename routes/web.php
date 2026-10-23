@@ -129,6 +129,14 @@ Route::middleware(['auth', 'role:admin', 'menu.access'])
             // Submenu Hak Akses
             Route::get('hak-akses', [\App\Http\Controllers\Pengaturan\HakAksesController::class, 'index'])->name('hak-akses');
             Route::post('hak-akses', [\App\Http\Controllers\Pengaturan\HakAksesController::class, 'update'])->name('hak-akses.update');
+
+            // Submenu Template untuk Struk
+            Route::get('struk', [\App\Http\Controllers\Pengaturan\TemplateStrukController::class, 'index'])->name('struk');
+            Route::post('struk', [\App\Http\Controllers\Pengaturan\TemplateStrukController::class, 'store'])->name('struk.store');
+            Route::put('struk/{id}', [\App\Http\Controllers\Pengaturan\TemplateStrukController::class, 'update'])->name('struk.update');
+            Route::delete('struk/{id}', [\App\Http\Controllers\Pengaturan\TemplateStrukController::class, 'destroy'])->name('struk.destroy');
+            Route::post('struk/{id}/set-active', [\App\Http\Controllers\Pengaturan\TemplateStrukController::class, 'setActive'])->name('struk.set-active');
+            Route::post('struk/{id}/duplicate', [\App\Http\Controllers\Pengaturan\TemplateStrukController::class, 'duplicate'])->name('struk.duplicate');
         });
 
         // Laporan (Penjualan Shift, Riwayat Penjualan Harian, Pembelian Faktur)
