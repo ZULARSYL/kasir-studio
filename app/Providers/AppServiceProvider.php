@@ -19,6 +19,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Pengaturan Timezone Jakarta (WIB / UTC+7)
+        config(['app.timezone' => 'Asia/Jakarta']);
+        date_default_timezone_set('Asia/Jakarta');
+
+        // Pengaturan Bahasa & Format Tanggal Indonesia
+        \Carbon\Carbon::setLocale('id');
+        \Illuminate\Support\Carbon::setLocale('id');
+        setlocale(LC_TIME, 'id_ID.utf8', 'id_ID.UTF-8', 'id_ID', 'id', 'Indonesian_indonesia.1252', 'Indonesian');
+
         \Illuminate\Support\Facades\View::composer('template.index', function ($view) {
             if (auth()->check()) {
                 $notificationService = app(\App\Services\NotificationService::class);
