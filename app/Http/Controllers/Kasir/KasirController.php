@@ -46,6 +46,8 @@ class KasirController extends Controller
         // Shift sedang aktif, muat data transaksi POS
         $shift = $activeShift->load('tokoCabang');
 
+        $now = Carbon::now();
+
         // 1. Film yang tersedia beserta genrenya (Katalog Film sesuai referensi movie.png)
         $films = Film::with('genres')
             ->where('status', 'tersedia')
@@ -53,17 +55,60 @@ class KasirController extends Controller
             ->get();
         $genres = GenreFilm::orderBy('nama_genre', 'asc')->get();
 
+        // Hitung penayangan film yang sedang aktif di room saat ini (concurrent limit)
+        $activeTrxs = Transaksi::with('room')
+            ->whereNotNull('film_id')
+            ->whereNotNull('room_id')
+            ->where('status', 'selesai')
+            ->where('waktu_transaksi', '>=', $now->copy()->subHours(24))
+            ->where('waktu_transaksi', '<=', $now)
+            ->get();
+
+        $activeFilmUsage = [];
+        $occupiedRoomIds = [];
+
+        foreach ($activeTrxs as $trx) {
+            $mulai = Carbon::parse($trx->waktu_transaksi);
+            $durasi = (int) ($trx->durasi_menit ?: 120);
+            $selesai = $mulai->copy()->addMinutes($durasi);
+
+            if ($now->greaterThanOrEqualTo($mulai) && $now->lessThan($selesai)) {
+                if (! isset($activeFilmUsage[$trx->film_id])) {
+                    $activeFilmUsage[$trx->film_id] = [];
+                }
+                $sisaMenit = (int) $now->diffInMinutes($selesai, false);
+                $activeFilmUsage[$trx->film_id][$trx->room_id] = [
+                    'room_nama' => $trx->room?->nama ?? "Room #{$trx->room_id}",
+                    'sisa_menit' => $sisaMenit,
+                ];
+
+                // Tandai room terpakai jika pada cabang shift kasir saat ini
+                if ($trx->toko_cabang_id == $shift->toko_cabang_id) {
+                    $occupiedRoomIds[] = $trx->room_id;
+                }
+            }
+        }
+
+        $occupiedRoomIds = array_values(array_unique($occupiedRoomIds));
+
+        // Inject info limit dan slot ketersediaan ke setiap film
+        foreach ($films as $film) {
+            $activeRooms = $activeFilmUsage[$film->id] ?? [];
+            $activeCount = count($activeRooms);
+            $limit = max(1, (int) ($film->limit_penggunaan ?? 1));
+            $sisaSlot = max(0, $limit - $activeCount);
+            $isFull = $activeCount >= $limit;
+
+            $film->active_rooms_count = $activeCount;
+            $film->sisa_slot = $sisaSlot;
+            $film->is_slot_full = $isFull;
+            $film->active_rooms_details = array_values($activeRooms);
+        }
+
         // 2. Room studio pada toko cabang kasir
         $rooms = Room::where('toko_cabang_id', $shift->toko_cabang_id)
             ->orderBy('nama', 'asc')
             ->get();
-
-        // Cek room yang sedang terpakai dalam 2 jam terakhir
-        $occupiedRoomIds = Transaksi::where('toko_cabang_id', $shift->toko_cabang_id)
-            ->where('waktu_transaksi', '>=', Carbon::now()->subHours(2))
-            ->whereNotNull('room_id')
-            ->pluck('room_id')
-            ->toArray();
 
         // 3. Menu Cafe & Snack yang memiliki stok di cabang ini
         $cafeItems = DB::table('faktur_barang_details')
@@ -273,6 +318,16 @@ class KasirController extends Controller
         return DB::transaction(function () use ($validated, $shift, $user) {
             $film = Film::findOrFail($validated['film_id']);
             $room = Room::findOrFail($validated['room_id']);
+
+            // Validasi limit penggunaan room secara bersamaan (stok room film)
+            if (! $film->isAvailableForBooking()) {
+                $activeCount = $film->getActiveRoomsCount();
+                $limit = max(1, (int) ($film->limit_penggunaan ?? 1));
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Batas penggunaan film '{$film->judul}' sedang mencapai batas maksimal ({$activeCount}/{$limit} room aktif bersamaan). Harap tunggu hingga salah satu penayangan di room selesai.",
+                ], 422);
+            }
 
             // 1. Hitung biaya Film & Room serta denda jika penonton > 2 orang
             $hargaFilm = (float) $film->total_harga > 0 

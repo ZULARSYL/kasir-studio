@@ -242,7 +242,7 @@
                                         </span>
                                         <input type="text" id="searchMovieInput" 
                                                class="form-control border-start-0 border-end-0 py-2.5 ps-2 text-dark" 
-                                               placeholder="Scan barcode or type product name / SKU..." 
+                                               placeholder="Cari Nama Film..." 
                                                autocomplete="off">
                                         <span class="input-group-text bg-white border-start-0 pe-3">
                                             <kbd class="bg-light text-muted border px-2 py-0.5 small rounded font-monospace" title="Tekan '/' untuk fokus pencarian">/</kbd>
@@ -253,7 +253,7 @@
                                 <div class="col-12 col-md-5 col-xl-4">
                                     <div class="pos-category-select-wrapper">
                                         <select id="selectGenreFilter" class="form-select py-2.5 rounded-3 fw-semibold text-dark border-light-subtle">
-                                            <option value="all">All Categories</option>
+                                            <option value="all">Semua Genre</option>
                                             @foreach($genres as $genre)
                                                 <option value="{{ $genre->nama_genre }}">{{ $genre->nama_genre }}</option>
                                             @endforeach
@@ -279,15 +279,23 @@
                                         $genreNames = $film->genres->pluck('nama_genre')->implode(' ');
                                         $price = (float) $film->total_harga > 0 ? (float) $film->total_harga : ((float) $film->harga_per_menit * (int) $film->durasi_menit);
                                         $sku = 'FM-' . sprintf('%03d', $film->id);
+                                        $limit = max(1, (int) ($film->limit_penggunaan ?? 1));
+                                        $activeCount = (int) ($film->active_rooms_count ?? 0);
+                                        $sisaSlot = max(0, $limit - $activeCount);
+                                        $isSlotFull = (bool) ($film->is_slot_full ?? ($activeCount >= $limit));
                                     @endphp
                                     <div class="col movie-card-wrapper" data-genre="{{ $genreNames }}" data-title="{{ strtolower($film->judul) }}" data-sku="{{ strtolower($sku) }}">
-                                        <div class="pos-product-card card h-100 bg-white rounded-4 p-3 transition-all cursor-pointer movie-card position-relative" 
+                                        <div class="pos-product-card card h-100 {{ $isSlotFull ? 'film-slot-full' : 'bg-white cursor-pointer' }} rounded-4 p-3 transition-all movie-card position-relative" 
                                              data-id="{{ $film->id }}"
                                              data-judul="{{ $film->judul }}"
                                              data-durasi="{{ $film->durasi_menit }}"
                                              data-harga="{{ $price }}"
                                              data-poster="{{ $film->poster_url }}"
-                                             data-sku="{{ $sku }}">
+                                             data-sku="{{ $sku }}"
+                                             data-slot-full="{{ $isSlotFull ? '1' : '0' }}"
+                                             data-limit="{{ $limit }}"
+                                             data-active="{{ $activeCount }}"
+                                             data-sisa="{{ $sisaSlot }}">
                                             
                                             <!-- Thumbnail Container (Square dengan background halus mirip kasir.png) -->
                                             <div class="pos-thumb-box rounded-3 overflow-hidden position-relative mb-2">
@@ -297,6 +305,17 @@
                                                 <div class="pos-selected-badge position-absolute top-0 end-0 m-2 bg-emerald text-white rounded-circle shadow-sm">
                                                     <i class="bi bi-check-lg"></i>
                                                 </div>
+
+                                                <!-- Slot Stok Badge di Atas Cover -->
+                                                @if($isSlotFull)
+                                                    <span class="badge bg-danger text-white position-absolute top-0 start-0 m-2 shadow-sm font-monospace py-1 px-1.5" style="font-size: 0.65rem; z-index: 2;">
+                                                        <i class="bi bi-lock-fill me-1"></i>Slot Penuh ({{ $limit }}/{{ $limit }})
+                                                    </span>
+                                                @else
+                                                    <span class="badge {{ $sisaSlot <= 1 ? 'bg-warning text-dark' : 'bg-emerald text-white' }} position-absolute top-0 start-0 m-2 shadow-sm font-monospace py-0.5 px-1.5" style="font-size: 0.65rem; z-index: 2;">
+                                                        <i class="bi bi-door-open-fill me-0.5"></i>Sisa {{ $sisaSlot }}/{{ $limit }} Room
+                                                    </span>
+                                                @endif
 
                                                 <!-- Rating Usia Tag -->
                                                 <span class="badge bg-dark text-white position-absolute bottom-0 start-0 m-2 small font-monospace py-0.5 px-1.5" style="font-size: 0.65rem; opacity: 0.85;">
@@ -323,6 +342,20 @@
                                                     <i class="bi bi-clock me-0.5"></i>{{ $film->durasi_menit }}m
                                                 </span>
                                             </div>
+
+                                            <!-- Indikator Ketersediaan Slot Room -->
+                                            @if($isSlotFull)
+                                                <div class="mt-2 pt-1 border-top text-center">
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle w-100 py-1" style="font-size: 0.72rem;">
+                                                        <i class="bi bi-hourglass-split me-1"></i>(Tunggu Selesai)
+                                                    </span>
+                                                </div>
+                                            @else
+                                                <div class="mt-2 pt-1 border-top d-flex justify-content-between align-items-center text-muted" style="font-size: 0.72rem;">
+                                                    <span><i class="bi bi-door-open text-emerald me-0.5"></i>Slot Room:</span>
+                                                    <strong class="{{ $sisaSlot <= 1 ? 'text-warning' : 'text-emerald' }}">{{ $sisaSlot }} Tersedia</strong>
+                                                </div>
+                                            @endif
 
                                         </div>
                                     </div>
@@ -512,25 +545,22 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="form-label small fw-semibold text-muted mb-0">
-                                <i class="bi bi-people-fill text-primary me-1"></i>Jumlah Penonton dalam Room <span class="text-danger">*</span>
+                                <i class="bi bi-people-fill text-primary me-1"></i>Jumlah Penonton<span class="text-danger">*</span>
                             </label>
                             <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.72rem;">
                                 Standar: 2 Org
                             </span>
                         </div>
-                        <div class="input-group input-group-sm">
+                        <div class="input-group input-group-sm mt-2">
                             <button type="button" class="btn btn-outline-secondary px-3" id="btnMinusPenonton" title="Kurangi Penonton">-</button>
                             <input type="number" id="inputJumlahPenonton" class="form-control text-center fw-bold font-monospace fs-6" value="2" min="1" max="50">
                             <button type="button" class="btn btn-outline-secondary px-3" id="btnPlusPenonton" title="Tambah Penonton">+</button>
-                        </div>
-                        <div class="small mt-1 text-muted" id="infoDendaPenonton" style="font-size: 0.75rem;">
-                            <i class="bi bi-info-circle text-primary me-1"></i>Maksimal 2 orang gratis denda. Lebih dari 2 orang dikenakan biaya tambahan Rp 5.000 / orang.
                         </div>
                     </div>
 
                     <!-- CURRENT CART HEADER (Sesuai sidebar/kasir.png) -->
                     <div class="d-flex justify-content-between align-items-center mb-3 pt-2 border-top">
-                        <h6 class="fw-bold text-dark mb-0 fs-6">Current Cart</h6>
+                        <h6 class="fw-bold text-dark mb-0 fs-6">Keranjang</h6>
                         <button type="button" class="btn btn-link text-danger p-0 text-decoration-none small fw-semibold btn-reset-pos" title="Kosongkan Keranjang">
                             Clear All
                         </button>
@@ -583,8 +613,8 @@
                             <div class="pos-cart-empty-icon mx-auto mb-2 text-muted">
                                 <i class="bi bi-cart3 fs-2 opacity-50"></i>
                             </div>
-                            <h6 class="fw-bold text-dark mb-1 small">Cart is empty</h6>
-                            <p class="text-muted small mb-0" style="font-size: 0.78rem;">Click on products to add them</p>
+                            <h6 class="fw-bold text-dark mb-1 small">Keranjang Kosong</h6>
+                            <p class="text-muted small mb-0" style="font-size: 0.78rem;">klik film untuk menambahkan ke keranjang</p>
                         </div>
                     </div>
 
@@ -598,13 +628,13 @@
                         <!-- Biaya Tambahan Penonton (>2 orang) -->
                         <div class="d-flex justify-content-between align-items-center mb-2 text-danger small" id="rowDendaPenonton" style="display: none;">
                             <span>
-                                <i class="bi bi-person-plus-fill me-1"></i>Tambahan Penonton (<span id="labelExtraPenonton">0</span> org x Rp 5.000)
+                                <i class="bi bi-person-plus-fill me-1"></i>Tambahan Penonton
                             </span>
                             <span class="font-monospace fw-bold" id="labelDendaPenonton">+ Rp 0</span>
                         </div>
 
                         <!-- Voucher Promo Section -->
-                        <div class="mb-3">
+                        <div class="mb-3 mt-3">
                             <label class="form-label small fw-semibold text-muted">Kode Voucher Promo (Opsional)</label>
                             <div class="input-group input-group-sm">
                                 <input type="text" id="inputKodePromo" class="form-control text-uppercase font-monospace" placeholder="MASUKKAN VOUCHER">
@@ -656,7 +686,7 @@
                     <!-- METODE PEMBAYARAN (DATA MASTER) -->
                     <div class="mb-3">
                         <label class="form-label text-uppercase text-muted fw-bold small mb-1 pos-section-label">
-                            Metode Pembayaran (Data Master) <span class="text-danger">*</span>
+                            Metode Pembayaran<span class="text-danger">*</span>
                         </label>
                         <select id="selectTipePembayaran" class="form-select rounded-3 fw-semibold text-dark" required>
                             @foreach($tipePembayarans as $tp)
@@ -954,6 +984,19 @@
         border: 2px solid #10b981 !important;
         box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18) !important;
     }
+    .movie-card.film-slot-full {
+        opacity: 0.78;
+        background-color: #fff1f2 !important;
+        border: 1.5px dashed #f87171 !important;
+        cursor: not-allowed !important;
+    }
+    .movie-card.film-slot-full:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    .movie-card.film-slot-full .pos-thumb-img {
+        filter: grayscale(45%);
+    }
     .pos-thumb-box {
         aspect-ratio: 1 / 1;
         width: 100%;
@@ -1220,6 +1263,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // PILIH KARTU FILM
     document.querySelectorAll('.movie-card').forEach(card => {
         card.addEventListener('click', function () {
+            // Cek apakah batas limit penggunaan film sedang penuh
+            if (this.getAttribute('data-slot-full') === '1') {
+                const judul = this.getAttribute('data-judul') || 'Film ini';
+                const limit = this.getAttribute('data-limit') || '5';
+                alert(`Perhatian: Film "${judul}" sedang mencapai batas maksimal limit penggunaan (${limit}/${limit} room aktif bersamaan).\n\nRoom lain tidak dapat memilih atau memesan film ini untuk sementara waktu. Harap tunggu hingga salah satu penayangan room selesai.`);
+                return;
+            }
+
             document.querySelectorAll('.movie-card').forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
 
@@ -1493,22 +1544,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const dendaPenonton = orderState.dendaPenonton || 0;
         const rowDenda = document.getElementById('rowDendaPenonton');
         const labelDenda = document.getElementById('labelDendaPenonton');
-        const labelExtra = document.getElementById('labelExtraPenonton');
-        const infoDenda = document.getElementById('infoDendaPenonton');
 
         if (orderState.jumlahPenonton > 2) {
             const extra = orderState.jumlahPenonton - 2;
             if (rowDenda) rowDenda.style.setProperty('display', 'flex', 'important');
             if (labelExtra) labelExtra.textContent = extra;
             if (labelDenda) labelDenda.textContent = `+ ${formatRupiah(dendaPenonton)}`;
-            if (infoDenda) {
-                infoDenda.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Dikenakan tambahan ${extra} orang x Rp 5.000 = ${formatRupiah(dendaPenonton)}</span>`;
-            }
         } else {
             if (rowDenda) rowDenda.style.setProperty('display', 'none', 'important');
-            if (infoDenda) {
-                infoDenda.innerHTML = `<i class="bi bi-info-circle text-primary me-1"></i>Maksimal 2 orang gratis denda. Lebih dari 2 orang dikenakan biaya tambahan Rp 5.000 / orang.`;
-            }
         }
 
         // Kalkulasi Total
@@ -1889,6 +1932,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     resetPOS();
                     window.location.reload();
                 } else {
+                    modalKonfirmasiPembayaran.hide();
                     alert(data.message || 'Terjadi kesalahan saat memproses transaksi.');
                 }
             })

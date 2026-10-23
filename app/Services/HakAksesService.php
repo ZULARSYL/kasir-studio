@@ -116,13 +116,6 @@ class HakAksesService
                         'url' => '/admin/master/tipe-pembayaran',
                         'description' => 'Master tipe pembayaran (Tunai, QRIS, Transfer, Debit).',
                     ],
-                    'master.harga-perdurasi' => [
-                        'label' => 'Harga Perdurasi',
-                        'icon' => 'bi-clock-history',
-                        'route' => 'admin.master.harga-perdurasi',
-                        'url' => '/admin/master/harga-perdurasi',
-                        'description' => 'Kategori paket durasi tayang studio dan nominal harganya.',
-                    ],
                     'master.toko-cabang' => [
                         'label' => 'Toko Cabang',
                         'icon' => 'bi-buildings',

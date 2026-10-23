@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,6 +17,7 @@ class Film extends Model
         'poster',
         'sinopsis',
         'durasi_menit',
+        'limit_penggunaan',
         'harga_per_menit',
         'total_harga',
         'tahun_rilis',
@@ -26,6 +28,7 @@ class Film extends Model
 
     protected $casts = [
         'durasi_menit' => 'integer',
+        'limit_penggunaan' => 'integer',
         'harga_per_menit' => 'decimal:2',
         'total_harga' => 'decimal:2',
         'tahun_rilis' => 'integer',
@@ -89,5 +92,63 @@ class Film extends Model
         };
 
         return "<span class=\"badge {$color} border px-2 py-1 font-monospace fw-bold\">{$this->usia_rating}</span>";
+    }
+
+    /**
+     * Hitung berapa banyak room yang sedang aktif menayangkan film ini saat ini (concurrent).
+     */
+    public function getActiveRoomsCount(): int
+    {
+        $now = Carbon::now();
+
+        $activeTrxs = Transaksi::where('film_id', $this->id)
+            ->where('status', 'selesai')
+            ->whereNotNull('room_id')
+            ->where('waktu_transaksi', '>=', $now->copy()->subHours(24))
+            ->where('waktu_transaksi', '<=', $now)
+            ->get();
+
+        $activeRoomIds = [];
+        foreach ($activeTrxs as $trx) {
+            $mulai = Carbon::parse($trx->waktu_transaksi);
+            $durasi = (int) ($trx->durasi_menit ?: ($this->durasi_menit ?? 120));
+            $selesai = $mulai->copy()->addMinutes($durasi);
+
+            if ($now->greaterThanOrEqualTo($mulai) && $now->lessThan($selesai)) {
+                $activeRoomIds[$trx->room_id] = true;
+            }
+        }
+
+        return count($activeRoomIds);
+    }
+
+    /**
+     * Accessor untuk jumlah room aktif saat ini.
+     * Jika controller sudah meng-inject active_rooms_count, gunakan nilai tersebut untuk performa optimal.
+     */
+    public function getActiveRoomsCountAttribute(): int
+    {
+        if (isset($this->attributes['active_rooms_count'])) {
+            return (int) $this->attributes['active_rooms_count'];
+        }
+
+        return $this->getActiveRoomsCount();
+    }
+
+    /**
+     * Sisa slot room yang masih bisa menggunakan film ini secara bersamaan.
+     */
+    public function getSisaSlotAttribute(): int
+    {
+        $limit = max(1, (int) ($this->limit_penggunaan ?? 1));
+        return max(0, $limit - $this->active_rooms_count);
+    }
+
+    /**
+     * Cek apakah slot penggunaan film masih tersedia untuk dipesan.
+     */
+    public function isAvailableForBooking(): bool
+    {
+        return $this->status === 'tersedia' && $this->sisa_slot > 0;
     }
 }

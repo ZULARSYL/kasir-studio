@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Barang;
 use App\Models\GenreFilm;
-use App\Models\HargaPerdurasi;
 use App\Models\Jabatan;
 use App\Models\JenisBiaya;
 use App\Models\MenuCafe;
@@ -31,18 +30,7 @@ class MasterDataSeeder extends Seeder
             TipePembayaran::firstOrCreate(['metode_pembayaran' => $item['metode_pembayaran']], $item);
         }
 
-        // 2. Master Data Durasi (nama, durasi, kalkulasi harga)
-        $durasiList = [
-            ['nama' => 'Paket Reguler 1 Jam', 'durasi' => '1 Jam (60 Menit)', 'kalkulasi_harga' => 50000],
-            ['nama' => 'Paket Movie 2 Jam', 'durasi' => '2 Jam (120 Menit)', 'kalkulasi_harga' => 90000],
-            ['nama' => 'Paket Marathon 3 Jam', 'durasi' => '3 Jam (180 Menit)', 'kalkulasi_harga' => 130000],
-            ['nama' => 'Paket Midnight 4 Jam', 'durasi' => '4 Jam (240 Menit)', 'kalkulasi_harga' => 160000],
-        ];
-        foreach ($durasiList as $item) {
-            HargaPerdurasi::firstOrCreate(['nama' => $item['nama']], $item);
-        }
-
-        // 3. Toko Cabang (nama cabang, alamat, kontak)
+        // 2. Toko Cabang (nama cabang, alamat, kontak)
         $cabangs = [
             [
                 'nama_cabang' => 'Pressent Studio Sudirman',

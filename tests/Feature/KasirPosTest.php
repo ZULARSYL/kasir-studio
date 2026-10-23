@@ -397,6 +397,7 @@ class KasirPosTest extends TestCase
         $film = Film::create([
             'judul' => 'Avatar Way of Water',
             'durasi_menit' => 180,
+            'limit_penggunaan' => 10,
             'harga_per_menit' => 500,
             'total_harga' => 50000,
             'status' => 'tersedia',
