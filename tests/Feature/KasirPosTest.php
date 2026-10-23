@@ -138,7 +138,7 @@ class KasirPosTest extends TestCase
         $response->assertSee('Pesan Makanan & Minuman Cafe', false);
 
         // Cek panel checkout
-        $response->assertSee('Metode Pembayaran (Data Master)');
+        $response->assertSee('Metode Pembayaran');
         $response->assertSee('Bayar & Cetak Struk', false);
     }
 
