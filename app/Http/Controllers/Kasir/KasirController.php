@@ -12,6 +12,7 @@ use App\Models\MenuCafe;
 use App\Models\Promo;
 use App\Models\Room;
 use App\Models\SatuanBarang;
+use App\Models\TemplateStruk;
 use App\Models\TipePembayaran;
 use App\Models\TokoCabang;
 use App\Models\Transaksi;
@@ -482,6 +483,8 @@ class KasirController extends Controller
             'details.satuanBarang',
         ])->findOrFail($id);
 
-        return view('kasir.struk', compact('transaksi'));
+        $templateStruk = TemplateStruk::getActiveTemplate();
+
+        return view('kasir.struk', compact('transaksi', 'templateStruk'));
     }
 }
