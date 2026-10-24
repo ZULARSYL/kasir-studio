@@ -253,31 +253,44 @@
                             @endif
 
                             <!-- Card Footer Action -->
-                            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center gap-2">
+                            <div class="room-card-actions mt-auto pt-3 border-top">
                                 @if($room->is_occupied)
-                                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                        <button type="button" 
-                                           class="btn btn-sm btn-info text-white fw-bold rounded-3 px-2.5 py-1.5 d-flex align-items-center gap-1 shadow-sm btn-open-move-room"
+                                    <button type="button"
+                                           class="btn btn-sm btn-info text-white fw-bold rounded-3 d-flex align-items-center gap-1 shadow-sm room-card-action btn-open-move-room"
                                            data-room-id="{{ $room->id }}"
                                            data-room-nama="{{ $room->nama }}"
                                            title="Pindah ke room lain yang tersedia">
-                                            <i class="bi bi-arrow-left-right fs-6"></i>
-                                            <span>Pindah Room</span>
-                                        </button>
-                                        <a href="{{ route('kasir.kasir', ['mode' => 'ganti_film', 'room_id' => $room->id]) }}" 
-                                           class="btn btn-sm btn-warning text-dark fw-bold rounded-3 px-2.5 py-1.5 d-flex align-items-center gap-1 shadow-sm"
+                                        <i class="bi bi-arrow-left-right fs-6"></i>
+                                        <span>Pindah Room</span>
+                                    </button>
+                                    <a href="{{ route('kasir.kasir', ['mode' => 'ganti_film', 'room_id' => $room->id]) }}"
+                                           class="btn btn-sm btn-warning text-dark fw-bold rounded-3 d-flex align-items-center gap-1 shadow-sm room-card-action"
                                            title="Ganti Film yang sedang ditayangkan pada room ini">
-                                            <i class="bi bi-arrow-repeat fs-6"></i>
-                                            <span>Ganti Film</span>
-                                        </a>
-                                    </div>
+                                        <i class="bi bi-arrow-repeat fs-6"></i>
+                                        <span>Ganti Film</span>
+                                    </a>
+                                    <button type="button"
+                                           class="btn btn-sm btn-danger text-white fw-bold rounded-3 d-flex align-items-center gap-1 shadow-sm room-card-action btn-open-hentikan-pemutaran"
+                                           data-room-id="{{ $room->id }}"
+                                           data-room-nama="{{ $room->nama }}"
+                                           data-film-judul="{{ $room->film_judul }}"
+                                           data-sisa-waktu="{{ $room->sisa_waktu_teks }}"
+                                           title="Hentikan pemutaran jika penonton telah selesai menonton lebih awal">
+                                        <i class="bi bi-stop-circle fs-6"></i>
+                                        <span>Hentikan</span>
+                                    </button>
+                                    <a href="{{ route('kasir.kasir', ['mode' => 'pesanan_cafe', 'room_id' => $room->id]) }}"
+                                       class="btn btn-sm btn-outline-primary rounded-3 fw-semibold d-flex align-items-center gap-1 room-card-action"
+                                       title="Tambah pesanan makanan atau minuman cafe untuk room ini">
+                                        <i class="bi bi-cup-straw"></i>
+                                        <span>Pesanan Baru</span>
+                                    </a>
                                 @else
-                                    <div></div>
+                                    <a href="{{ route('kasir.kasir') }}" class="btn btn-sm btn-emerald text-white rounded-3 fw-semibold d-flex align-items-center gap-1 room-card-action room-card-action-primary">
+                                        <i class="bi bi-cart-plus"></i>
+                                        <span>Pilih Room Ini</span>
+                                    </a>
                                 @endif
-                                <a href="{{ route('kasir.kasir') }}" class="btn btn-sm {{ $room->is_occupied ? 'btn-outline-secondary' : 'btn-emerald text-white' }} rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1">
-                                    <i class="bi bi-cart-plus"></i>
-                                    <span>{{ $room->is_occupied ? 'Buat Pesanan Baru' : 'Pilih Room Ini' }}</span>
-                                </a>
                             </div>
                         </div>
                     </div>
@@ -416,6 +429,7 @@
 
 </div>
 @include('kasir.partials.modal-move-room')
+@include('kasir.partials.modal-hentikan-pemutaran')
 @endsection
 
 @section('styles')
@@ -630,6 +644,30 @@
     .available-state-box {
         background: rgba(240, 253, 244, 0.7);
         border: 1px dashed rgba(134, 239, 172, 0.8);
+    }
+
+    .room-card-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .room-card-action {
+        width: 100%;
+        min-height: 40px;
+        justify-content: center;
+        padding: 0.4rem 0.5rem;
+        white-space: nowrap;
+    }
+
+    .room-card-action-primary {
+        grid-column: 1 / -1;
+    }
+
+    @media (max-width: 359.98px) {
+        .room-card-action {
+            font-size: 0.75rem;
+        }
     }
 
     .available-icon-box {

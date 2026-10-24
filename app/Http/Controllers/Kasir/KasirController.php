@@ -57,6 +57,7 @@ class KasirController extends Controller
                 'activeBranchShift' => $activeBranchShift,
                 'lastClosedShift' => $lastClosedShift,
                 'gantiFilmContext' => null,
+                'pesananCafeContext' => null,
             ]);
         }
 
@@ -92,7 +93,9 @@ class KasirController extends Controller
         foreach ($activeTrxs as $trx) {
             $mulai = $trx->waktu_mulai_film ? Carbon::parse($trx->waktu_mulai_film) : Carbon::parse($trx->waktu_transaksi);
             $durasi = (int) ($trx->durasi_menit ?: 120);
-            $selesai = $mulai->copy()->addMinutes($durasi);
+            $selesai = $trx->waktu_selesai_film 
+                ? Carbon::parse($trx->waktu_selesai_film) 
+                : $mulai->copy()->addMinutes($durasi);
 
             if ($now->greaterThanOrEqualTo($mulai) && $now->lessThan($selesai)) {
                 if (! isset($activeFilmUsage[$trx->film_id])) {
@@ -199,7 +202,9 @@ class KasirController extends Controller
                         ? Carbon::parse($latestTrx->waktu_mulai_film) 
                         : Carbon::parse($latestTrx->waktu_transaksi);
                     $durasiRencana = (int) ($latestTrx->durasi_menit ?: ($latestTrx->film?->durasi_menit ?? 120));
-                    $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+                    $waktuSelesai = $latestTrx->waktu_selesai_film 
+                        ? Carbon::parse($latestTrx->waktu_selesai_film) 
+                        : $waktuMulai->copy()->addMinutes($durasiRencana);
 
                     // Syarat 1: Hanya saat room berstatus sedang berlangsung
                     if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
@@ -245,6 +250,66 @@ class KasirController extends Controller
             }
         }
 
+        // 8. Context Pesanan Cafe Tambahan jika diakses via mode pesanan_cafe
+        $pesananCafeContext = null;
+        if ($request->get('mode') === 'pesanan_cafe' && $request->filled('room_id')) {
+            $targetRoom = Room::where('id', $request->get('room_id'))
+                ->where('toko_cabang_id', $shift->toko_cabang_id)
+                ->first();
+
+            if (! $targetRoom) {
+                session()->flash('error', 'Room tidak ditemukan pada outlet cabang aktif saat ini.');
+            } else {
+                $latestTrx = Transaksi::with(['film', 'room', 'tipePembayaran', 'details.barang'])
+                    ->where('room_id', $targetRoom->id)
+                    ->where('status', 'selesai')
+                    ->whereNotNull('film_id')
+                    ->where('waktu_transaksi', '>=', $now->copy()->subHours(24))
+                    ->where('waktu_transaksi', '<=', $now)
+                    ->latest('waktu_transaksi')
+                    ->first();
+
+                if (! $latestTrx) {
+                    session()->flash('error', "Tidak ada penayangan aktif pada room {$targetRoom->nama}.");
+                } else {
+                    $waktuMulai = $latestTrx->waktu_mulai_film 
+                        ? Carbon::parse($latestTrx->waktu_mulai_film) 
+                        : Carbon::parse($latestTrx->waktu_transaksi);
+                    $durasiRencana = (int) ($latestTrx->durasi_menit ?: ($latestTrx->film?->durasi_menit ?? 120));
+                    $waktuSelesai = $latestTrx->waktu_selesai_film 
+                        ? Carbon::parse($latestTrx->waktu_selesai_film) 
+                        : $waktuMulai->copy()->addMinutes($durasiRencana);
+
+                    // Hanya saat room berstatus sedang berlangsung
+                    if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
+                        session()->flash('error', "Pesanan kafe tambahan hanya dapat dilakukan saat room {$targetRoom->nama} berstatus sedang berlangsung.");
+                    } else {
+                        $durasiBerjalan = max(1, (int) $waktuMulai->diffInMinutes($now));
+                        $sisaMenit = max(0, (int) $now->diffInMinutes($waktuSelesai, false));
+
+                        $pesananCafeContext = [
+                            'is_mode_pesanan_cafe' => true,
+                            'room_id' => $targetRoom->id,
+                            'room_nama' => $targetRoom->nama,
+                            'room_kapasitas' => $targetRoom->kapasitas,
+                            'transaksi_id' => $latestTrx->id,
+                            'nomor_transaksi' => $latestTrx->nomor_transaksi,
+                            'nama_pelanggan' => $latestTrx->nama_pelanggan,
+                            'film_id' => $latestTrx->film_id,
+                            'film_judul' => $latestTrx->film?->judul ?? 'Film Studio',
+                            'film_durasi' => $durasiRencana,
+                            'waktu_mulai_time' => $waktuMulai->format('H:i'),
+                            'waktu_selesai_time' => $waktuSelesai->format('H:i'),
+                            'durasi_berjalan_menit' => $durasiBerjalan,
+                            'sisa_menit' => $sisaMenit,
+                            'subtotal_cafe_sebelumnya' => (float) $latestTrx->subtotal_cafe,
+                            'total_bayar_sebelumnya' => (float) $latestTrx->total_bayar,
+                        ];
+                    }
+                }
+            }
+        }
+
         return view('kasir.kasir', [
             'hasActiveShift' => true,
             'activeShift' => $shift,
@@ -259,6 +324,7 @@ class KasirController extends Controller
             'promos' => $promos,
             'recentTransactions' => $recentTransactions,
             'gantiFilmContext' => $gantiFilmContext,
+            'pesananCafeContext' => $pesananCafeContext,
         ]);
     }
 
@@ -830,7 +896,9 @@ class KasirController extends Controller
             ? Carbon::parse($latestTrx->waktu_mulai_film) 
             : Carbon::parse($latestTrx->waktu_transaksi);
         $durasiRencana = (int) ($latestTrx->durasi_menit ?: ($latestTrx->film?->durasi_menit ?? 120));
-        $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+        $waktuSelesai = $latestTrx->waktu_selesai_film 
+            ? Carbon::parse($latestTrx->waktu_selesai_film) 
+            : $waktuMulai->copy()->addMinutes($durasiRencana);
 
         // Syarat 1: Hanya dapat dilakukan ketika room berstatus sedang berlangsung
         if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
@@ -929,7 +997,9 @@ class KasirController extends Controller
             ? Carbon::parse($transaksi->waktu_mulai_film) 
             : Carbon::parse($transaksi->waktu_transaksi);
         $durasiRencana = (int) ($transaksi->durasi_menit ?: ($transaksi->film?->durasi_menit ?? 120));
-        $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+        $waktuSelesai = $transaksi->waktu_selesai_film 
+            ? Carbon::parse($transaksi->waktu_selesai_film) 
+            : $waktuMulai->copy()->addMinutes($durasiRencana);
 
         if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
             return response()->json([
@@ -1059,7 +1129,9 @@ class KasirController extends Controller
                 ? Carbon::parse($transaksi->waktu_mulai_film) 
                 : Carbon::parse($transaksi->waktu_transaksi);
             $durasiRencana = (int) ($transaksi->durasi_menit ?: ($transaksi->film?->durasi_menit ?? 120));
-            $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+            $waktuSelesai = $transaksi->waktu_selesai_film 
+                ? Carbon::parse($transaksi->waktu_selesai_film) 
+                : $waktuMulai->copy()->addMinutes($durasiRencana);
 
             // Syarat 1: Hanya saat room sedang berlangsung
             if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
@@ -1223,7 +1295,9 @@ class KasirController extends Controller
             ? Carbon::parse($latestTrx->waktu_mulai_film) 
             : Carbon::parse($latestTrx->waktu_transaksi);
         $durasiRencana = (int) ($latestTrx->durasi_menit ?: ($latestTrx->film?->durasi_menit ?? 120));
-        $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+        $waktuSelesai = $latestTrx->waktu_selesai_film 
+            ? Carbon::parse($latestTrx->waktu_selesai_film) 
+            : $waktuMulai->copy()->addMinutes($durasiRencana);
 
         if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
             return response()->json([
@@ -1246,7 +1320,7 @@ class KasirController extends Controller
         foreach ($activeTrxs as $trx) {
             $start = $trx->waktu_mulai_film ? Carbon::parse($trx->waktu_mulai_film) : Carbon::parse($trx->waktu_transaksi);
             $duration = (int) ($trx->durasi_menit ?: ($trx->film?->durasi_menit ?? 120));
-            $end = $start->copy()->addMinutes($duration);
+            $end = $trx->waktu_selesai_film ? Carbon::parse($trx->waktu_selesai_film) : $start->copy()->addMinutes($duration);
             if ($now->greaterThanOrEqualTo($start) && $now->lessThan($end)) {
                 $occupiedRoomIds[] = $trx->room_id;
             }
@@ -1338,7 +1412,9 @@ class KasirController extends Controller
                 ? Carbon::parse($transaksi->waktu_mulai_film) 
                 : Carbon::parse($transaksi->waktu_transaksi);
             $durasiRencana = (int) ($transaksi->durasi_menit ?: ($transaksi->film?->durasi_menit ?? 120));
-            $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+            $waktuSelesai = $transaksi->waktu_selesai_film 
+                ? Carbon::parse($transaksi->waktu_selesai_film) 
+                : $waktuMulai->copy()->addMinutes($durasiRencana);
 
             // Syarat: Penayangan sedang berlangsung
             if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
@@ -1361,7 +1437,9 @@ class KasirController extends Controller
                     ? Carbon::parse($targetTrx->waktu_mulai_film) 
                     : Carbon::parse($targetTrx->waktu_transaksi);
                 $targetDurasi = (int) ($targetTrx->durasi_menit ?: ($targetTrx->film?->durasi_menit ?? 120));
-                $targetSelesai = $targetMulai->copy()->addMinutes($targetDurasi);
+                $targetSelesai = $targetTrx->waktu_selesai_film 
+                    ? Carbon::parse($targetTrx->waktu_selesai_film) 
+                    : $targetMulai->copy()->addMinutes($targetDurasi);
 
                 if ($now->greaterThanOrEqualTo($targetMulai) && $now->lessThan($targetSelesai)) {
                     return response()->json([
@@ -1423,6 +1501,241 @@ class KasirController extends Controller
                     'durasi_berjalan_menit' => $durasiBerjalan,
                     'sisa_menit' => $sisaMenit,
                     'history_id' => $history->id,
+                ],
+            ]);
+        });
+    }
+
+    /**
+     * Hentikan pemutaran film di room secara manual sebelum waktu durasi selesai.
+     * Sesi pemutaran diakhiri, waktu selesai dan durasi aktual dicatat, riwayat ditutup,
+     * dan status room segera menjadi TERSEDIA kembali untuk penonton berikutnya.
+     */
+    public function hentikanPemutaran(Request $request, $roomId)
+    {
+        $room = Room::findOrFail($roomId);
+        $now = Carbon::now();
+
+        return DB::transaction(function () use ($room, $now, $request) {
+            $transaksi = Transaksi::with(['film', 'room', 'filmHistories'])
+                ->where('room_id', $room->id)
+                ->where('status', 'selesai')
+                ->whereNotNull('film_id')
+                ->where('waktu_transaksi', '>=', $now->copy()->subHours(24))
+                ->where('waktu_transaksi', '<=', $now)
+                ->latest('waktu_transaksi')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $transaksi) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Tidak ada penayangan aktif pada room {$room->nama}.",
+                ], 422);
+            }
+
+            $waktuMulai = $transaksi->waktu_mulai_film 
+                ? Carbon::parse($transaksi->waktu_mulai_film) 
+                : Carbon::parse($transaksi->waktu_transaksi);
+            $durasiRencana = (int) ($transaksi->durasi_menit ?: ($transaksi->film?->durasi_menit ?? 120));
+            $waktuSelesai = $transaksi->waktu_selesai_film 
+                ? Carbon::parse($transaksi->waktu_selesai_film) 
+                : $waktuMulai->copy()->addMinutes($durasiRencana);
+
+            // Periksa apakah penayangan sedang berlangsung
+            if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Penayangan di room {$room->nama} sudah selesai atau telah dihentikan.",
+                ], 422);
+            }
+
+            $durasiAktual = max(1, (int) $waktuMulai->diffInMinutes($now));
+            $sisaDurasi = max(0, (int) $now->diffInMinutes($waktuSelesai, false));
+            $user = Auth::user();
+            $namaKasir = $user?->name ?? 'Kasir';
+
+            // 1. Perbarui transaksi utama: set waktu_selesai_film = now() dan durasi_menit = durasiAktual
+            $transaksi->waktu_selesai_film = $now;
+            $transaksi->durasi_menit = $durasiAktual;
+
+            $alasan = $request->input('alasan');
+            $alasanText = !empty($alasan) ? " (Alasan: {$alasan})" : '';
+            $logMsg = "\n[" . $now->translatedFormat('d/m/Y H:i:s') . "] Pemutaran film dihentikan lebih awal oleh {$namaKasir}. " .
+                "Durasi aktual: {$durasiAktual} mnt (Selesai {$sisaDurasi} mnt lebih awal){$alasanText}.";
+            $transaksi->catatan = trim(($transaksi->catatan ?? '') . $logMsg);
+            $transaksi->save();
+
+            // 2. Tutup riwayat film yang sedang berjalan jika ada
+            $activeHistory = TransaksiFilmHistory::where('transaksi_id', $transaksi->id)
+                ->where('status', 'berjalan')
+                ->latest('id')
+                ->first();
+
+            if ($activeHistory) {
+                $activeHistory->update([
+                    'waktu_selesai' => $now,
+                    'durasi_aktual_menit' => $durasiAktual,
+                    'status' => 'selesai',
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Pemutaran film di room {$room->nama} berhasil diberhentikan. Room sekarang telah tersedia kembali.",
+                'data' => [
+                    'room_id' => $room->id,
+                    'room_nama' => $room->nama,
+                    'film_judul' => $transaksi->film?->judul ?? 'Film Studio',
+                    'durasi_aktual_menit' => $durasiAktual,
+                    'waktu_selesai' => $now->translatedFormat('H:i') . ' WIB',
+                ],
+            ]);
+        });
+    }
+
+    /**
+     * Simpan pesanan cafe tambahan untuk room yang sedang berlangsung penayangan.
+     * Hanya boleh memesan makanan atau minuman cafe (tidak boleh memilih film atau room lagi).
+     */
+    public function simpanPesananCafe(Request $request)
+    {
+        $validated = $request->validate([
+            'transaksi_id' => 'required|exists:transaksis,id',
+            'tipe_pembayaran_id' => 'required|exists:tipe_pembayarans,id',
+            'uang_diterima' => 'nullable|numeric|min:0',
+            'promo_id' => 'nullable|exists:promos,id',
+            'catatan' => 'nullable|string|max:255',
+            'cafe_items' => 'required|array|min:1',
+            'cafe_items.*.barang_id' => 'required|exists:barangs,id',
+            'cafe_items.*.satuan_barang_id' => 'nullable|exists:satuan_barangs,id',
+            'cafe_items.*.qty' => 'required|numeric|min:1',
+            'cafe_items.*.harga_satuan' => 'required|numeric|min:0',
+        ]);
+
+        $user = Auth::user();
+
+        return DB::transaction(function () use ($validated, $user) {
+            $transaksi = Transaksi::with(['film', 'room', 'details'])->lockForUpdate()->findOrFail($validated['transaksi_id']);
+            $now = Carbon::now();
+
+            $waktuMulai = $transaksi->waktu_mulai_film 
+                ? Carbon::parse($transaksi->waktu_mulai_film) 
+                : Carbon::parse($transaksi->waktu_transaksi);
+            $durasiRencana = (int) ($transaksi->durasi_menit ?: ($transaksi->film?->durasi_menit ?? 120));
+            $waktuSelesai = $transaksi->waktu_selesai_film 
+                ? Carbon::parse($transaksi->waktu_selesai_film) 
+                : $waktuMulai->copy()->addMinutes($durasiRencana);
+
+            // Syarat: Penayangan room masih harus aktif
+            if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Penayangan pada room ini sudah selesai atau dihentikan. Pesanan tambahan tidak dapat diproses.',
+                ], 422);
+            }
+
+            // Hitung total item cafe tambahan dan kurangi stok FIFO
+            $subtotalCafeBaru = 0;
+            $cafeOrderDetails = [];
+            $itemNames = [];
+            $cabangId = $transaksi->toko_cabang_id;
+
+            foreach ($validated['cafe_items'] as $itemData) {
+                $qty = (float) $itemData['qty'];
+                $hargaSatuan = (float) $itemData['harga_satuan'];
+                $lineTotal = $qty * $hargaSatuan;
+                $subtotalCafeBaru += $lineTotal;
+
+                $barang = Barang::find($itemData['barang_id']);
+                $itemNames[] = ($barang?->nama_barang ?? 'Item') . " ({$qty})";
+
+                $cafeOrderDetails[] = [
+                    'barang_id' => $itemData['barang_id'],
+                    'satuan_barang_id' => $itemData['satuan_barang_id'] ?? null,
+                    'qty' => $qty,
+                    'harga_satuan' => $hargaSatuan,
+                    'subtotal' => $lineTotal,
+                ];
+
+                // Potong stok FIFO dari faktur_barang_details di cabang ini
+                $qtyToDeduct = $qty;
+                $fakturDetails = FakturBarangDetail::whereHas('fakturBarang', function ($q) use ($cabangId) {
+                        $q->where('toko_cabang_id', $cabangId);
+                    })
+                    ->where('barang_id', $itemData['barang_id'])
+                    ->where('qty', '>', 0)
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                foreach ($fakturDetails as $fakturDetail) {
+                    if ($qtyToDeduct <= 0) break;
+
+                    if ($fakturDetail->qty >= $qtyToDeduct) {
+                        $fakturDetail->decrement('qty', $qtyToDeduct);
+                        $qtyToDeduct = 0;
+                    } else {
+                        $qtyToDeduct -= $fakturDetail->qty;
+                        $fakturDetail->update(['qty' => 0]);
+                    }
+                }
+            }
+
+            // Hitung diskon promo jika ada
+            $diskon = 0;
+            $promoId = $validated['promo_id'] ?? null;
+            if ($promoId) {
+                $promo = Promo::find($promoId);
+                if ($promo && $promo->status === 'aktif') {
+                    $nilai = trim($promo->nilai);
+                    if (str_contains($nilai, '%')) {
+                        $persen = (float) str_replace('%', '', $nilai);
+                        $diskon = round(($subtotalCafeBaru * $persen) / 100);
+                    } else {
+                        $cleanNilai = (float) preg_replace('/[^0-9]/', '', $nilai);
+                        $diskon = min($subtotalCafeBaru, $cleanNilai);
+                    }
+                }
+            }
+
+            $totalBayarTambahan = max(0, $subtotalCafeBaru - $diskon);
+            $uangDiterima = isset($validated['uang_diterima']) && (float) $validated['uang_diterima'] > 0
+                ? (float) $validated['uang_diterima']
+                : $totalBayarTambahan;
+            $kembalian = max(0, $uangDiterima - $totalBayarTambahan);
+
+            // Simpan detail item ke transaksi
+            foreach ($cafeOrderDetails as $detail) {
+                $transaksi->details()->create($detail);
+            }
+
+            // Perbarui akumulasi nilai transaksi
+            $transaksi->subtotal_cafe = (float) $transaksi->subtotal_cafe + $subtotalCafeBaru;
+            $transaksi->diskon = (float) $transaksi->diskon + $diskon;
+            $transaksi->total_bayar = (float) $transaksi->total_bayar + $totalBayarTambahan;
+            $transaksi->uang_diterima = (float) $transaksi->uang_diterima + $uangDiterima;
+
+            $tipePembayaran = TipePembayaran::find($validated['tipe_pembayaran_id']);
+            $namaTipeBayar = $tipePembayaran?->metode_pembayaran ?? 'TUNAI';
+            $namaKasir = $user?->name ?? 'Kasir';
+
+            $catatanTambahan = !empty($validated['catatan']) ? " (Catatan: {$validated['catatan']})" : '';
+            $logPesanan = "\n[" . $now->translatedFormat('d/m/Y H:i:s') . "] Tambah Pesanan Cafe: " . implode(', ', $itemNames) .
+                " | Tambahan: Rp " . number_format($totalBayarTambahan, 0, ',', '.') . " ({$namaTipeBayar}). Petugas: {$namaKasir}{$catatanTambahan}.";
+            $transaksi->catatan = trim(($transaksi->catatan ?? '') . $logPesanan);
+            $transaksi->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Pesanan cafe berhasil ditambahkan ke {$transaksi->room?->nama}.",
+                'data' => [
+                    'transaksi_id' => $transaksi->id,
+                    'nomor_transaksi' => $transaksi->nomor_transaksi,
+                    'room_nama' => $transaksi->room?->nama,
+                    'total_tambahan' => $totalBayarTambahan,
+                    'uang_diterima' => $uangDiterima,
+                    'kembalian' => $kembalian,
+                    'struk_url' => route('kasir.struk', $transaksi->id),
                 ],
             ]);
         });

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Barang;
+use App\Models\FakturBarang;
+use App\Models\FakturBarangDetail;
 use App\Models\Film;
 use App\Models\KasirShift;
 use App\Models\MenuCafe;
@@ -12,6 +14,7 @@ use App\Models\TipePembayaran;
 use App\Models\TokoCabang;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
+use App\Models\TransaksiFilmHistory;
 use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\MasterDataSeeder;
@@ -263,4 +266,374 @@ class KasirDashboardTest extends TestCase
         $response->assertDontSee('TRX-KEMARIN-0001');
         $response->assertDontSee('Doni Kemarin');
     }
+
+    /**
+     * Test room yang sedang digunakan memiliki tombol 'Buat Pesanan Baru' mengarah ke pesanan cafe,
+     * serta memiliki tombol 'Hentikan' pemutaran lebih awal.
+     */
+    public function test_occupied_room_in_dashboard_has_pesanan_cafe_link_and_hentikan_button(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+        $kasir->update(['toko_cabang_id' => $cabang->id]);
+
+        $room = Room::create([
+            'toko_cabang_id' => $cabang->id,
+            'nama' => 'Studio Deluxe 1',
+            'kapasitas' => 4,
+        ]);
+
+        $film = Film::create([
+            'judul' => 'Inception',
+            'durasi_menit' => 148,
+            'harga_per_menit' => 1000,
+            'total_harga' => 148000,
+            'status' => 'tersedia',
+        ]);
+
+        $tipeBayar = TipePembayaran::first();
+
+        Carbon::setTestNow(Carbon::create(2026, 10, 24, 10, 0, 0));
+
+        $transaksi = Transaksi::create([
+            'nomor_transaksi' => 'TRX-TEST-HENTIKAN-01',
+            'toko_cabang_id' => $cabang->id,
+            'user_id' => $kasir->id,
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'tipe_pembayaran_id' => $tipeBayar->id,
+            'nama_pelanggan' => 'Rina Sasmita',
+            'durasi_menit' => 148,
+            'harga_film' => 148000,
+            'harga_room' => 0,
+            'subtotal_film_room' => 148000,
+            'subtotal_cafe' => 0,
+            'diskon' => 0,
+            'total_bayar' => 148000,
+            'uang_diterima' => 150000,
+            'kembalian' => 2000,
+            'status' => 'selesai',
+            'waktu_transaksi' => Carbon::now()->subMinutes(30),
+        ]);
+
+        $response = $this->actingAs($kasir)->get(route('kasir.index'));
+        $response->assertOk();
+
+        // Cek link Buat Pesanan Baru mengarah ke mode pesanan_cafe
+        $expectedPesananCafeUrl = route('kasir.kasir', ['mode' => 'pesanan_cafe', 'room_id' => $room->id]);
+        $response->assertSee($expectedPesananCafeUrl);
+        $response->assertSee('Buat Pesanan Baru');
+
+        // Cek tombol Hentikan dan modal hentikan pemutaran
+        $response->assertSee('btn-open-hentikan-pemutaran');
+        $response->assertSee('Hentikan');
+        $response->assertSee('modalHentikanPemutaran');
+
+        Carbon::setTestNow();
+    }
+
+    /**
+     * Test kasir dapat memberhentikan penayangan film lebih awal,
+     * sehingga sesi pemutaran ditutup dan room langsung menjadi TERSEDIA kembali.
+     */
+    public function test_kasir_can_hentikan_pemutaran_early_and_room_becomes_available(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+        $kasir->update(['toko_cabang_id' => $cabang->id]);
+
+        $room = Room::create([
+            'toko_cabang_id' => $cabang->id,
+            'nama' => 'Studio Deluxe 2',
+            'kapasitas' => 4,
+        ]);
+
+        $film = Film::create([
+            'judul' => 'Interstellar Journey',
+            'durasi_menit' => 120,
+            'harga_per_menit' => 1000,
+            'total_harga' => 120000,
+            'status' => 'tersedia',
+        ]);
+
+        $tipeBayar = TipePembayaran::first();
+
+        Carbon::setTestNow(Carbon::create(2026, 10, 24, 12, 0, 0));
+
+        $transaksi = Transaksi::create([
+            'nomor_transaksi' => 'TRX-TEST-HENTIKAN-02',
+            'toko_cabang_id' => $cabang->id,
+            'user_id' => $kasir->id,
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'tipe_pembayaran_id' => $tipeBayar->id,
+            'nama_pelanggan' => 'Denny Pratama',
+            'durasi_menit' => 120,
+            'harga_film' => 120000,
+            'harga_room' => 0,
+            'subtotal_film_room' => 120000,
+            'subtotal_cafe' => 0,
+            'diskon' => 0,
+            'total_bayar' => 120000,
+            'uang_diterima' => 120000,
+            'kembalian' => 0,
+            'status' => 'selesai',
+            'waktu_transaksi' => Carbon::now()->subMinutes(45), // Tayang 45 menit lalu
+        ]);
+
+        // Buat riwayat pemutaran aktif
+        $history = TransaksiFilmHistory::create([
+            'transaksi_id' => $transaksi->id,
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'judul_film' => $film->judul,
+            'waktu_mulai' => $transaksi->waktu_transaksi,
+            'durasi_menit_rencana' => 120,
+            'tarif_per_menit' => 1000,
+            'biaya_film' => 120000,
+            'status' => 'berjalan',
+        ]);
+
+        // Panggil endpoint hentikan pemutaran
+        $response = $this->actingAs($kasir)->postJson(route('kasir.room.hentikan', $room->id), [
+            'alasan' => 'Penonton selesai lebih awal atas permintaan sendiri',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'data' => [
+                'room_id' => $room->id,
+                'durasi_aktual_menit' => 45,
+            ],
+        ]);
+
+        // Verifikasi transaksi terupdate
+        $transaksi->refresh();
+        $this->assertNotNull($transaksi->waktu_selesai_film);
+        $this->assertEquals(45, $transaksi->durasi_menit);
+        $this->assertStringContainsString('Pemutaran film dihentikan lebih awal', $transaksi->catatan);
+
+        // Verifikasi history status ditutup
+        $history->refresh();
+        $this->assertEquals('selesai', $history->status);
+        $this->assertEquals(45, $history->durasi_aktual_menit);
+
+        // Verifikasi di dashboard room kini berstatus TERSEDIA
+        $dashboardResponse = $this->actingAs($kasir)->get(route('kasir.index'));
+        $dashboardResponse->assertOk();
+        $dashboardResponse->assertSee('Studio Siap Digunakan');
+
+        Carbon::setTestNow();
+    }
+
+    /**
+     * Test halaman POS saat dibuka dalam mode pesanan cafe mengunci tab film & room,
+     * sehingga kasir HANYA bisa memilih pesanan cafe makanan & minuman.
+     */
+    public function test_kasir_pos_in_pesanan_cafe_mode_locks_film_and_room_selection(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+        $kasir->update(['toko_cabang_id' => $cabang->id]);
+
+        $shift = KasirShift::create([
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 200000,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+
+        $room = Room::create([
+            'toko_cabang_id' => $cabang->id,
+            'nama' => 'Studio Mini 5',
+            'kapasitas' => 2,
+        ]);
+
+        $film = Film::create([
+            'judul' => 'Dune Part Two',
+            'durasi_menit' => 166,
+            'harga_per_menit' => 1000,
+            'total_harga' => 166000,
+            'status' => 'tersedia',
+        ]);
+
+        $tipeBayar = TipePembayaran::first();
+
+        Carbon::setTestNow(Carbon::create(2026, 10, 24, 15, 0, 0));
+
+        $transaksi = Transaksi::create([
+            'nomor_transaksi' => 'TRX-TEST-CAFE-01',
+            'toko_cabang_id' => $cabang->id,
+            'user_id' => $kasir->id,
+            'kasir_shift_id' => $shift->id,
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'tipe_pembayaran_id' => $tipeBayar->id,
+            'nama_pelanggan' => 'Maya Anggraini',
+            'durasi_menit' => 166,
+            'harga_film' => 166000,
+            'harga_room' => 0,
+            'subtotal_film_room' => 166000,
+            'subtotal_cafe' => 0,
+            'diskon' => 0,
+            'total_bayar' => 166000,
+            'uang_diterima' => 166000,
+            'kembalian' => 0,
+            'status' => 'selesai',
+            'waktu_transaksi' => Carbon::now()->subMinutes(20),
+        ]);
+
+        $response = $this->actingAs($kasir)->get(route('kasir.kasir', [
+            'mode' => 'pesanan_cafe',
+            'room_id' => $room->id,
+        ]));
+
+        $response->assertOk();
+
+        // Banner instruksi mode pesanan cafe muncul
+        $response->assertSee('Mode Pesanan Cafe (F&amp;B) &mdash; Studio ' . $room->nama, false);
+        $response->assertSee('Khusus Makanan &amp; Minuman', false);
+        $response->assertSee('TRX-TEST-CAFE-01');
+
+        // Tab film dan room terkunci (disabled)
+        $response->assertSee('Film (Terkunci)');
+        $response->assertSee('Room (Terkunci)');
+        $response->assertSee('Pesan Makanan & Minuman Cafe', false);
+
+        // Panel checkout khusus cafe hadir
+        $response->assertSee('Simpan &amp; Bayar Pesanan Cafe', false);
+
+        Carbon::setTestNow();
+    }
+
+    /**
+     * Test kasir dapat menyimpan pesanan cafe tambahan untuk room yang sedang aktif,
+     * transaksi utama bertambah nilai F&B-nya, stok berkurang, dan film/room tetap tidak berubah.
+     */
+    public function test_kasir_can_save_additional_cafe_order_for_occupied_room(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+        $kasir->update(['toko_cabang_id' => $cabang->id]);
+
+        $shift = KasirShift::create([
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 200000,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+
+        $room = Room::create([
+            'toko_cabang_id' => $cabang->id,
+            'nama' => 'Studio Cafe 7',
+            'kapasitas' => 4,
+        ]);
+
+        $film = Film::create([
+            'judul' => 'The Batman',
+            'durasi_menit' => 175,
+            'harga_per_menit' => 1000,
+            'total_harga' => 175000,
+            'status' => 'tersedia',
+        ]);
+
+        $tipeBayar = TipePembayaran::first();
+        $kategori = MenuCafe::first();
+        $satuan = SatuanBarang::first();
+
+        // Buat barang dan faktur stok
+        $barang = Barang::create([
+            'nama_barang' => 'Ice Lemon Tea Jumbo',
+            'menu_cafe_id' => $kategori->id,
+        ]);
+
+        $faktur = FakturBarang::create([
+            'nomor_faktur' => 'FB-CAFE-ADD-001',
+            'toko_cabang_id' => $cabang->id,
+            'tanggal_faktur' => '2026-10-24',
+            'total_nominal' => 100000,
+            'user_id' => $kasir->id,
+        ]);
+
+        FakturBarangDetail::create([
+            'faktur_barang_id' => $faktur->id,
+            'barang_id' => $barang->id,
+            'satuan_barang_id' => $satuan->id,
+            'qty' => 20,
+            'harga_awal' => 8000,
+            'harga_jual' => 18000,
+            'subtotal' => 160000,
+        ]);
+
+        Carbon::setTestNow(Carbon::create(2026, 10, 24, 16, 0, 0));
+
+        $transaksi = Transaksi::create([
+            'nomor_transaksi' => 'TRX-TEST-ADD-01',
+            'toko_cabang_id' => $cabang->id,
+            'user_id' => $kasir->id,
+            'kasir_shift_id' => $shift->id,
+            'film_id' => $film->id,
+            'room_id' => $room->id,
+            'tipe_pembayaran_id' => $tipeBayar->id,
+            'nama_pelanggan' => 'Garry Sanjaya',
+            'durasi_menit' => 175,
+            'harga_film' => 175000,
+            'harga_room' => 0,
+            'subtotal_film_room' => 175000,
+            'subtotal_cafe' => 0,
+            'diskon' => 0,
+            'total_bayar' => 175000,
+            'uang_diterima' => 175000,
+            'kembalian' => 0,
+            'status' => 'selesai',
+            'waktu_transaksi' => Carbon::now()->subMinutes(15),
+        ]);
+
+        // Simpan pesanan cafe tambahan: 2 pcs @ 18000 = 36000
+        $response = $this->actingAs($kasir)->postJson(route('kasir.pesanan-cafe.simpan'), [
+            'transaksi_id' => $transaksi->id,
+            'tipe_pembayaran_id' => $tipeBayar->id,
+            'uang_diterima' => 50000,
+            'cafe_items' => [
+                [
+                    'barang_id' => $barang->id,
+                    'satuan_barang_id' => $satuan->id,
+                    'qty' => 2,
+                    'harga_satuan' => 18000,
+                ],
+            ],
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'status' => 'success',
+            'data' => [
+                'transaksi_id' => $transaksi->id,
+                'total_tambahan' => 36000,
+            ],
+        ]);
+
+        // Verifikasi transaksi utama terupdate
+        $transaksi->refresh();
+        $this->assertEquals(36000, $transaksi->subtotal_cafe);
+        $this->assertEquals(175000 + 36000, $transaksi->total_bayar);
+        // Film dan room tetap tidak berubah
+        $this->assertEquals($film->id, $transaksi->film_id);
+        $this->assertEquals($room->id, $transaksi->room_id);
+
+        // Verifikasi detail cafe tersimpan di transaksi_details
+        $this->assertDatabaseHas('transaksi_details', [
+            'transaksi_id' => $transaksi->id,
+            'barang_id' => $barang->id,
+            'qty' => 2,
+            'harga_satuan' => 18000,
+            'subtotal' => 36000,
+        ]);
+
+        Carbon::setTestNow();
+    }
 }
+

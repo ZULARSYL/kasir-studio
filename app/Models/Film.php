@@ -163,7 +163,9 @@ class Film extends Model
         foreach ($activeTrxs as $trx) {
             $mulai = $trx->waktu_mulai_film ? Carbon::parse($trx->waktu_mulai_film) : Carbon::parse($trx->waktu_transaksi);
             $durasi = (int) ($trx->durasi_menit ?: ($this->durasi_menit ?? 120));
-            $selesai = $mulai->copy()->addMinutes($durasi);
+            $selesai = $trx->waktu_selesai_film 
+                ? Carbon::parse($trx->waktu_selesai_film) 
+                : $mulai->copy()->addMinutes($durasi);
 
             if ($now->greaterThanOrEqualTo($mulai) && $now->lessThan($selesai)) {
                 $activeRoomIds[$trx->room_id] = true;

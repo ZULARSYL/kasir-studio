@@ -73,6 +73,7 @@ class KasirDashboardController extends Controller
             $latestTrx = Transaksi::with(['film', 'user', 'tipePembayaran'])
                 ->where('room_id', $room->id)
                 ->where('status', 'selesai')
+                ->whereNotNull('film_id')
                 ->whereDate('waktu_transaksi', $today)
                 ->latest('waktu_transaksi')
                 ->first();
@@ -91,7 +92,9 @@ class KasirDashboardController extends Controller
                     ? Carbon::parse($latestTrx->waktu_mulai_film) 
                     : Carbon::parse($latestTrx->waktu_transaksi);
                 $durasi = (int) ($latestTrx->durasi_menit ?: ($latestTrx->film?->durasi_menit ?? 120));
-                $selesai = $mulai->copy()->addMinutes($durasi);
+                $selesai = $latestTrx->waktu_selesai_film 
+                    ? Carbon::parse($latestTrx->waktu_selesai_film) 
+                    : $mulai->copy()->addMinutes($durasi);
 
                 // Room terpakai jika waktu sekarang berada di antara waktu mulai dan waktu selesai
                 if ($now->greaterThanOrEqualTo($mulai) && $now->lessThan($selesai)) {
