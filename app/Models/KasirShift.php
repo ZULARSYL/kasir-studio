@@ -16,7 +16,12 @@ class KasirShift extends Model
     protected $fillable = [
         'user_id',
         'toko_cabang_id',
+        'shift_id',
+        'nama_shift',
+        'jam_mulai_jadwal',
+        'jam_selesai_jadwal',
         'modal_awal',
+        'pergantian_dari_kasir_shift_id',
         'total_penjualan',
         'total_tunai',
         'total_non_tunai',
@@ -27,6 +32,7 @@ class KasirShift extends Model
         'waktu_tutup',
         'catatan_buka',
         'catatan_tutup',
+        'keterangan_waktu',
     ];
 
     protected $casts = [
@@ -50,6 +56,21 @@ class KasirShift extends Model
         return $this->belongsTo(TokoCabang::class, 'toko_cabang_id');
     }
 
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class, 'shift_id');
+    }
+
+    public function previousShift(): BelongsTo
+    {
+        return $this->belongsTo(KasirShift::class, 'pergantian_dari_kasir_shift_id');
+    }
+
+    public function nextShift(): HasMany
+    {
+        return $this->hasMany(KasirShift::class, 'pergantian_dari_kasir_shift_id');
+    }
+
     public function transaksis(): HasMany
     {
         return $this->hasMany(Transaksi::class, 'kasir_shift_id');
@@ -63,6 +84,28 @@ class KasirShift extends Model
         return static::where('user_id', $userId)
             ->where('status', 'buka')
             ->latest('waktu_buka')
+            ->first();
+    }
+
+    /**
+     * Dapatkan shift yang sedang aktif pada cabang tertentu (Rule 7).
+     */
+    public static function getActiveShiftForCabang($cabangId)
+    {
+        return static::where('toko_cabang_id', $cabangId)
+            ->where('status', 'buka')
+            ->latest('waktu_buka')
+            ->first();
+    }
+
+    /**
+     * Dapatkan shift terakhir yang telah ditutup pada cabang tertentu (Rule 4).
+     */
+    public static function getLastClosedShiftForCabang($cabangId)
+    {
+        return static::where('toko_cabang_id', $cabangId)
+            ->where('status', 'tutup')
+            ->latest('waktu_tutup')
             ->first();
     }
 }

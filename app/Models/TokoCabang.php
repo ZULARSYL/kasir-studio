@@ -32,4 +32,16 @@ class TokoCabang extends Model
     {
         return $this->hasMany(Pengeluaran::class, 'toko_cabang_id');
     }
+
+    public function filmStokCabangs(): HasMany
+    {
+        return $this->hasMany(FilmStokCabang::class, 'toko_cabang_id');
+    }
+
+    public function films()
+    {
+        return $this->belongsToMany(Film::class, 'film_stok_cabangs', 'toko_cabang_id', 'film_id')
+            ->withPivot('stok')
+            ->withTimestamps();
+    }
 }

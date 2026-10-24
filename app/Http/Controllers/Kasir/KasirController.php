@@ -12,6 +12,7 @@ use App\Models\MenuCafe;
 use App\Models\Promo;
 use App\Models\Room;
 use App\Models\SatuanBarang;
+use App\Models\Shift;
 use App\Models\TemplateStruk;
 use App\Models\TipePembayaran;
 use App\Models\TokoCabang;
@@ -38,17 +39,29 @@ class KasirController extends Controller
         // Jika belum ada shift aktif, muat form Buka Kasir (Modal Awal)
         if (! $activeShift) {
             $cabangs = TokoCabang::orderBy('nama_cabang', 'asc')->get();
+            $availableShifts = Shift::active()->get();
+            $assignedCabang = $user->tokoCabang;
+            $activeCabangId = $assignedCabang?->id ?? $cabangs->first()?->id;
+
+            // Cek apakah ada shift aktif di cabang ini (Rule 7)
+            $activeBranchShift = $activeCabangId ? KasirShift::getActiveShiftForCabang($activeCabangId) : null;
+            // Cek shift terakhir yang ditutup (Rule 4)
+            $lastClosedShift = $activeCabangId ? KasirShift::getLastClosedShiftForCabang($activeCabangId) : null;
+
             return view('kasir.kasir', [
                 'hasActiveShift' => false,
                 'activeShift' => null,
                 'cabangs' => $cabangs,
-                'assignedCabang' => $user->tokoCabang,
+                'assignedCabang' => $assignedCabang,
+                'availableShifts' => $availableShifts,
+                'activeBranchShift' => $activeBranchShift,
+                'lastClosedShift' => $lastClosedShift,
                 'gantiFilmContext' => null,
             ]);
         }
 
         // Shift sedang aktif, muat data transaksi POS
-        $shift = $activeShift->load('tokoCabang');
+        $shift = $activeShift->load(['tokoCabang', 'shift']);
 
         $now = Carbon::now();
         $totalPendapatanToday = (float) Transaksi::whereDate('waktu_transaksi', Carbon::today())
@@ -62,11 +75,13 @@ class KasirController extends Controller
             ->get();
         $genres = GenreFilm::orderBy('nama_genre', 'asc')->get();
 
-        // Hitung penayangan film yang sedang aktif di room saat ini (concurrent limit)
+        // Hitung penayangan film yang sedang aktif di room saat ini khusus pada outlet shift kasir ini (stok independen per outlet)
+        $cabangId = $shift->toko_cabang_id;
         $activeTrxs = Transaksi::with('room')
             ->whereNotNull('film_id')
             ->whereNotNull('room_id')
             ->where('status', 'selesai')
+            ->where('toko_cabang_id', $cabangId)
             ->where('waktu_transaksi', '>=', $now->copy()->subHours(24))
             ->where('waktu_transaksi', '<=', $now)
             ->get();
@@ -89,23 +104,21 @@ class KasirController extends Controller
                     'sisa_menit' => $sisaMenit,
                 ];
 
-                // Tandai room terpakai jika pada cabang shift kasir saat ini
-                if ($trx->toko_cabang_id == $shift->toko_cabang_id) {
-                    $occupiedRoomIds[] = $trx->room_id;
-                }
+                $occupiedRoomIds[] = $trx->room_id;
             }
         }
 
         $occupiedRoomIds = array_values(array_unique($occupiedRoomIds));
 
-        // Inject info limit dan slot ketersediaan ke setiap film
+        // Inject info limit dan slot ketersediaan independen per outlet ke setiap film
         foreach ($films as $film) {
             $activeRooms = $activeFilmUsage[$film->id] ?? [];
             $activeCount = count($activeRooms);
-            $limit = max(1, (int) ($film->limit_penggunaan ?? 1));
+            $limit = $film->getLimitPenggunaanForCabang($cabangId);
             $sisaSlot = max(0, $limit - $activeCount);
             $isFull = $activeCount >= $limit;
 
+            $film->limit_penggunaan = $limit;
             $film->active_rooms_count = $activeCount;
             $film->sisa_slot = $sisaSlot;
             $film->is_slot_full = $isFull;
@@ -250,7 +263,98 @@ class KasirController extends Controller
     }
 
     /**
-     * Buka Shift Kasir dengan memasukkan modal awal kasir.
+     * Dapatkan informasi master shift, validasi ketersediaan pergantian shift (Rule 7),
+     * dan nominal modal awal otomatis untuk Shift 2 (Rule 4).
+     */
+    public function getShiftInfo(Request $request)
+    {
+        $cabangId = $request->get('toko_cabang_id');
+        $shiftId = $request->get('shift_id');
+
+        if (! $cabangId) {
+            $user = Auth::user();
+            $cabangId = $user->toko_cabang_id ?? TokoCabang::first()?->id;
+        }
+
+        $cabang = TokoCabang::find($cabangId);
+        $shift = $shiftId ? Shift::find($shiftId) : Shift::active()->first();
+
+        // 1. Cek apakah ada shift aktif saat ini di cabang tersebut (Rule 7)
+        $activeShiftAtBranch = KasirShift::with(['user', 'shift'])
+            ->where('toko_cabang_id', $cabangId)
+            ->where('status', 'buka')
+            ->first();
+
+        $canStart = true;
+        $activeWarning = null;
+        $user = Auth::user();
+
+        if ($activeShiftAtBranch) {
+            if ($activeShiftAtBranch->user_id == $user->id) {
+                $canStart = true;
+                $activeWarning = 'Anda sudah memiliki sesi shift aktif pada outlet ini.';
+            } else {
+                $canStart = false; // Rule 7: Shift berikutnya tidak boleh dimulai sebelum shift sebelumnya tutup
+                $petugasNama = $activeShiftAtBranch->user?->name ?? 'Kasir sebelumnya';
+                $shiftNama = $activeShiftAtBranch->nama_shift ?? $activeShiftAtBranch->shift?->nama_shift ?? 'Shift Sebelumnya';
+                $bukaJam = $activeShiftAtBranch->waktu_buka ? $activeShiftAtBranch->waktu_buka->format('H:i') : '-';
+                $activeWarning = "Pergantian shift tidak dapat dimulai! {$shiftNama} masih dibuka oleh {$petugasNama} (sejak {$bukaJam} WIB) dan belum melakukan proses tutup kasir. Tutup kasir shift sebelumnya harus diselesaikan terlebih dahulu.";
+            }
+        }
+
+        // 2. Ambil shift terakhir yang ditutup pada cabang ini (Rule 4)
+        $lastClosedShift = KasirShift::with(['user', 'shift'])
+            ->where('toko_cabang_id', $cabangId)
+            ->where('status', 'tutup')
+            ->latest('waktu_tutup')
+            ->first();
+
+        $modalAwalOtomatis = 0;
+        $infoSaldoAkhirShift1 = null;
+
+        if ($lastClosedShift && $lastClosedShift->modal_akhir !== null) {
+            $modalAwalOtomatis = (float) $lastClosedShift->modal_akhir;
+            $tutupPetugas = $lastClosedShift->user?->name ?? 'Kasir';
+            $tutupJam = $lastClosedShift->waktu_tutup ? $lastClosedShift->waktu_tutup->format('H:i') : '-';
+            $shiftLabel = $lastClosedShift->nama_shift ?? $lastClosedShift->shift?->nama_shift ?? 'Shift 1';
+            $infoSaldoAkhirShift1 = "Otomatis mengambil saldo akhir {$shiftLabel} (Rp " . number_format($modalAwalOtomatis, 0, ',', '.') . ") yang ditutup oleh {$tutupPetugas} pada {$tutupJam} WIB.";
+        }
+
+        // 3. Evaluasi deviasi waktu operasional fleksibel (Rule 5)
+        $now = Carbon::now();
+        $deviasi = $shift ? $shift->hitungDeviasiWaktuMulai($now) : null;
+
+        return response()->json([
+            'status' => 'success',
+            'cabang' => $cabang ? ['id' => $cabang->id, 'nama' => $cabang->nama_cabang] : null,
+            'shift' => $shift ? [
+                'id' => $shift->id,
+                'nama' => $shift->nama_shift,
+                'jam_mulai' => $shift->jam_mulai,
+                'jam_selesai' => $shift->jam_selesai,
+                'formatted_jadwal' => $shift->formatted_jadwal,
+                'aturan_modal_awal' => $shift->aturan_modal_awal,
+                'is_otomatis' => $shift->isOtomatisModal(),
+            ] : null,
+            'can_start' => $canStart,
+            'active_shift_warning' => $activeWarning,
+            'active_shift' => $activeShiftAtBranch ? [
+                'id' => $activeShiftAtBranch->id,
+                'nama_shift' => $activeShiftAtBranch->nama_shift,
+                'kasir' => $activeShiftAtBranch->user?->name,
+                'waktu_buka' => $activeShiftAtBranch->waktu_buka?->format('H:i'),
+            ] : null,
+            'modal_awal_otomatis' => $modalAwalOtomatis,
+            'modal_awal_otomatis_format' => 'Rp ' . number_format($modalAwalOtomatis, 0, ',', '.'),
+            'info_saldo_akhir' => $infoSaldoAkhirShift1,
+            'deviasi_waktu' => $deviasi,
+        ]);
+    }
+
+    /**
+     * Buka Shift Kasir dengan menghubungkan Master Data Shift,
+     * validasi pergantian shift (Rule 7), aturan modal awal manual/otomatis (Rule 3 & 4),
+     * serta pencatatan deviasi waktu operasional fleksibel (Rule 5).
      */
     public function bukaShift(Request $request)
     {
@@ -263,43 +367,116 @@ class KasirController extends Controller
 
         $validated = $request->validate([
             'toko_cabang_id' => 'required|exists:toko_cabang,id',
-            'modal_awal' => 'required|numeric|min:0',
-            'catatan_buka' => 'nullable|string|max:255',
+            'shift_id' => 'nullable|exists:shifts,id',
+            'modal_awal' => 'nullable|numeric|min:0',
+            'catatan_buka' => 'nullable|string|max:500',
         ]);
 
-        $user = Auth::user();
+        $redirectRoute = $user->role === 'admin' ? 'admin.kasir.index' : 'kasir.kasir';
 
-        // Tutup shift menggantung jika ada sebelumnya
+        // 1. Validasi Pergantian Shift (Rule 7):
+        // Shift berikutnya TIDAK BOLEH dimulai sebelum proses tutup kasir shift sebelumnya selesai
+        $activeShiftAtBranch = KasirShift::with(['user', 'shift'])
+            ->where('toko_cabang_id', $validated['toko_cabang_id'])
+            ->where('status', 'buka')
+            ->first();
+
+        if ($activeShiftAtBranch) {
+            if ($activeShiftAtBranch->user_id == $user->id) {
+                // User sudah membuka shift ini sendiri sebelumnya
+                return redirect()->route($redirectRoute)
+                    ->with('info', 'Anda sudah memiliki sesi shift yang sedang aktif pada outlet ini.');
+            }
+
+            $prevShiftName = $activeShiftAtBranch->nama_shift ?? $activeShiftAtBranch->shift?->nama_shift ?? 'Shift Sebelumnya';
+            $prevCashierName = $activeShiftAtBranch->user?->name ?? 'Kasir sebelumnya';
+            $prevTime = $activeShiftAtBranch->waktu_buka ? $activeShiftAtBranch->waktu_buka->format('H:i') : '-';
+
+            return redirect()->back()->withInput()->with('error', 
+                "Pergantian shift ditolak! {$prevShiftName} masih dibuka oleh {$prevCashierName} (sejak {$prevTime} WIB) dan belum melakukan tutup kasir. Shift berikutnya tidak dapat dimulai sebelum proses tutup kasir shift sebelumnya selesai."
+            );
+        }
+
+        // Tentukan Master Data Shift (Rule 1 & 2)
+        $shift = !empty($validated['shift_id']) 
+            ? Shift::find($validated['shift_id']) 
+            : Shift::active()->first();
+
+        $pergantianDariId = null;
+        $modalAwal = 0;
+
+        // 2. Tentukan Modal Awal sesuai Aturan Master Shift (Rule 3 & 4)
+        if ($shift && $shift->isOtomatisModal()) {
+            // Rule 4: Modal awal Shift 2 otomatis mengambil nominal saldo akhir dari proses tutup kasir Shift 1
+            $lastClosedShift = KasirShift::where('toko_cabang_id', $validated['toko_cabang_id'])
+                ->where('status', 'tutup')
+                ->latest('waktu_tutup')
+                ->first();
+
+            if ($lastClosedShift && $lastClosedShift->modal_akhir !== null) {
+                $modalAwal = (float) $lastClosedShift->modal_akhir;
+                $pergantianDariId = $lastClosedShift->id;
+            } else {
+                $modalAwal = (float) ($validated['modal_awal'] ?? 0);
+            }
+        } else {
+            // Rule 3: Modal awal Shift 1 kasir memasukkan modal awal secara manual saat memulai shift
+            $modalAwal = (float) ($validated['modal_awal'] ?? 0);
+        }
+
+        // 3. Pencatatan Waktu Operasional Fleksibel (Rule 5)
+        $now = Carbon::now();
+        $deviasi = $shift ? $shift->hitungDeviasiWaktuMulai($now) : null;
+        $keteranganWaktu = $deviasi ? $deviasi['keterangan'] : 'Sesuai jadwal operasional';
+
+        $catatanBuka = !empty($validated['catatan_buka']) ? $validated['catatan_buka'] : null;
+
+        // Tutup shift menggantung milik user ini jika ada di tempat lain
         KasirShift::where('user_id', $user->id)
             ->where('status', 'buka')
             ->update([
                 'status' => 'tutup',
-                'waktu_tutup' => now(),
+                'waktu_tutup' => $now,
             ]);
 
-        $shift = KasirShift::create([
+        $kasirShift = KasirShift::create([
             'user_id' => $user->id,
             'toko_cabang_id' => $validated['toko_cabang_id'],
-            'modal_awal' => $validated['modal_awal'],
+            'shift_id' => $shift?->id,
+            'nama_shift' => $shift?->nama_shift ?? 'Shift 1',
+            'jam_mulai_jadwal' => $shift?->jam_mulai ?? '11:00',
+            'jam_selesai_jadwal' => $shift?->jam_selesai ?? '16:00',
+            'modal_awal' => $modalAwal,
+            'pergantian_dari_kasir_shift_id' => $pergantianDariId,
             'status' => 'buka',
-            'waktu_buka' => now(),
-            'catatan_buka' => $validated['catatan_buka'] ?? null,
+            'waktu_buka' => $now,
+            'catatan_buka' => $catatanBuka,
+            'keterangan_waktu' => $keteranganWaktu,
         ]);
 
-        $redirectRoute = Auth::user()->role === 'admin' ? 'admin.kasir.index' : 'kasir.kasir';
+        $namaShiftTampil = $kasirShift->nama_shift;
+        $pesanModal = $shift && $shift->isOtomatisModal()
+            ? "Modal awal otomatis diteruskan dari saldo akhir Shift 1 sebesar Rp " . number_format($modalAwal, 0, ',', '.')
+            : "Modal awal kas Rp " . number_format($modalAwal, 0, ',', '.');
 
         return redirect()->route($redirectRoute)
-            ->with('success', 'Shift kasir berhasil dibuka dengan modal awal Rp ' . number_format($shift->modal_awal, 0, ',', '.') . '. Selamat bertugas!');
+            ->with('success', "{$namaShiftTampil} berhasil dibuka! {$pesanModal}. Selamat bertugas!");
     }
 
     /**
-     * Tutup Shift Kasir (Tutup Toko).
+     * Tutup Shift Kasir (Tutup Toko / Selesai Sesi).
+     * Mencatat saldo modal akhir yang akan otomatis menjadi modal awal Shift 2 berikutnya (Rule 4),
+     * serta mencatat deviasi waktu penutupan operasional fleksibel (Rule 5).
      */
     public function tutupShift(Request $request)
     {
         $user = Auth::user();
-        $shift = KasirShift::getActiveShift($user->id);
-        $redirectRoute = Auth::user()->role === 'admin' ? 'admin.kasir.index' : 'kasir.kasir';
+        $shift = KasirShift::with('shift')->where('user_id', $user->id)
+            ->where('status', 'buka')
+            ->latest('waktu_buka')
+            ->first();
+
+        $redirectRoute = $user->role === 'admin' ? 'admin.kasir.index' : 'kasir.kasir';
 
         if (! $shift) {
             return redirect()->route($redirectRoute)
@@ -311,15 +488,52 @@ class KasirController extends Controller
             'catatan_tutup' => 'nullable|string|max:500',
         ]);
 
+        $now = Carbon::now();
+        $logTutup = '';
+
+        // Hitung deviasi penutupan terhadap jadwal operasional fleksibel (Rule 5)
+        if ($shift->jam_selesai_jadwal) {
+            $jamParts = explode(':', $shift->jam_selesai_jadwal);
+            $targetTutup = $now->copy()->setTime((int) $jamParts[0], (int) ($jamParts[1] ?? 0), 0);
+            if ($shift->jam_selesai_jadwal === '00:00' || $shift->jam_selesai_jadwal === '24:00') {
+                $targetTutup = $now->copy()->endOfDay();
+            }
+
+            $diffMins = (int) $targetTutup->diffInMinutes($now, false);
+            if (abs($diffMins) <= 5) {
+                $logTutup = "Ditutup tepat waktu pada {$now->format('H:i')} WIB (Jadwal: {$shift->jam_selesai_jadwal} WIB).";
+            } elseif ($diffMins < 0) {
+                $logTutup = "Ditutup " . abs($diffMins) . " menit lebih awal pada {$now->format('H:i')} WIB (Jadwal: {$shift->jam_selesai_jadwal} WIB).";
+            } else {
+                $logTutup = "Ditutup terlambat {$diffMins} menit pada {$now->format('H:i')} WIB (Jadwal: {$shift->jam_selesai_jadwal} WIB).";
+            }
+        }
+
+        // Kalkulasi ulang total transaksi pada shift ini
+        $transaksis = Transaksi::where('kasir_shift_id', $shift->id)->get();
+        $totalPenjualan = (float) $transaksis->sum('total_bayar');
+        $totalTunai = (float) $transaksis->filter(fn($t) => $t->tipePembayaran && str_contains(strtolower($t->tipePembayaran->metode_pembayaran ?? ''), 'tunai'))->sum('total_bayar');
+        $totalNonTunai = $totalPenjualan - $totalTunai;
+        $totalTrxCount = $transaksis->count();
+
+        $catatanTutup = trim(($validated['catatan_tutup'] ?? '') . ($logTutup ? "\n[Log Operasional] {$logTutup}" : ''));
+
         $shift->update([
             'modal_akhir' => $validated['modal_akhir'],
+            'total_penjualan' => $totalPenjualan,
+            'total_tunai' => $totalTunai,
+            'total_non_tunai' => $totalNonTunai,
+            'total_transaksi' => $totalTrxCount,
             'status' => 'tutup',
-            'waktu_tutup' => now(),
-            'catatan_tutup' => $validated['catatan_tutup'] ?? null,
+            'waktu_tutup' => $now,
+            'catatan_tutup' => $catatanTutup,
         ]);
 
+        $modalAkhirFormat = 'Rp ' . number_format($validated['modal_akhir'], 0, ',', '.');
+        $namaShift = $shift->nama_shift ?? 'Kasir';
+
         return redirect()->route($redirectRoute)
-            ->with('success', 'Shift kasir telah ditutup. Laporan penjualan harian telah tersimpan dengan aman.');
+            ->with('success', "Shift {$namaShift} telah ditutup dengan saldo akhir {$modalAkhirFormat}. Saldo ini otomatis siap digunakan sebagai modal awal Shift berikutnya.");
     }
 
     /**
@@ -399,13 +613,14 @@ class KasirController extends Controller
             $film = Film::findOrFail($validated['film_id']);
             $room = Room::findOrFail($validated['room_id']);
 
-            // Validasi limit penggunaan room secara bersamaan (stok room film)
-            if (! $film->isAvailableForBooking()) {
-                $activeCount = $film->getActiveRoomsCount();
-                $limit = max(1, (int) ($film->limit_penggunaan ?? 1));
+            // Validasi limit penggunaan room secara bersamaan pada outlet ini (stok room film per cabang)
+            $cabangId = $shift?->toko_cabang_id ?? $room->toko_cabang_id;
+            if (! $film->isAvailableForBooking($cabangId)) {
+                $activeCount = $film->getActiveRoomsCount($cabangId);
+                $limit = $film->getLimitPenggunaanForCabang($cabangId);
                 return response()->json([
                     'status' => 'error',
-                    'message' => "Batas penggunaan film '{$film->judul}' sedang mencapai batas maksimal ({$activeCount}/{$limit} room aktif bersamaan). Harap tunggu hingga salah satu penayangan di room selesai.",
+                    'message' => "Batas penggunaan film '{$film->judul}' pada outlet ini sedang mencapai batas maksimal ({$activeCount}/{$limit} room aktif bersamaan). Harap tunggu hingga salah satu penayangan di room selesai.",
                 ], 422);
             }
 
@@ -635,14 +850,16 @@ class KasirController extends Controller
 
         $biayaAktualTerpakai = min((float) $latestTrx->harga_film, round($durasiAktual * $tarifPerMenit));
 
+        $cabangId = $latestTrx->toko_cabang_id;
+
         // Syarat 2: Kasir memilih film pengganti dari daftar film yang aktif dan tersedia
         $availableFilms = Film::where('status', 'tersedia')
             ->where('id', '!=', $latestTrx->film_id)
             ->orderBy('judul', 'asc')
             ->get()
-            ->map(function ($f) {
-                $activeCount = $f->getActiveRoomsCount();
-                $limit = max(1, (int) ($f->limit_penggunaan ?? 1));
+            ->map(function ($f) use ($cabangId) {
+                $activeCount = $f->getActiveRoomsCount($cabangId);
+                $limit = $f->getLimitPenggunaanForCabang($cabangId);
                 $isLimitFull = $activeCount >= $limit;
 
                 $harga = (float) $f->total_harga > 0 
@@ -825,13 +1042,15 @@ class KasirController extends Controller
                 ], 422);
             }
 
-            // Validasi batas limit penggunaan film baru (Rule 2)
-            if (! $filmBaru->isAvailableForBooking()) {
-                $activeCount = $filmBaru->getActiveRoomsCount();
-                $limit = max(1, (int) ($filmBaru->limit_penggunaan ?? 1));
+            $cabangId = $transaksi->toko_cabang_id;
+
+            // Validasi batas limit penggunaan film baru pada outlet ini (Rule 2)
+            if (! $filmBaru->isAvailableForBooking($cabangId)) {
+                $activeCount = $filmBaru->getActiveRoomsCount($cabangId);
+                $limit = $filmBaru->getLimitPenggunaanForCabang($cabangId);
                 return response()->json([
                     'status' => 'error',
-                    'message' => "Batas penggunaan film '{$filmBaru->judul}' sedang mencapai batas maksimal ({$activeCount}/{$limit} room aktif bersamaan). Silakan pilih film lain.",
+                    'message' => "Batas penggunaan film '{$filmBaru->judul}' pada outlet ini sedang mencapai batas maksimal ({$activeCount}/{$limit} room aktif bersamaan). Silakan pilih film lain.",
                 ], 422);
             }
 

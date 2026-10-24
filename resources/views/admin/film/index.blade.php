@@ -111,7 +111,7 @@
                         <th class="text-muted small fw-bold">TARIF / MENIT</th>
                         <th class="text-muted small fw-bold">TOTAL HARGA</th>
                         <th class="text-muted small fw-bold">STATUS</th>
-                        <th class="text-muted small fw-bold">LIMIT ROOM</th>
+                        <th class="text-muted small fw-bold" style="min-width: 170px;">STOK PER OUTLET</th>
                         <th class="text-end pe-4 text-muted small fw-bold" style="width: 140px;">AKSI</th>
                     </tr>
                 </thead>
@@ -166,18 +166,30 @@
                             </td>
                             <td>
                                 <div class="d-flex flex-column gap-1">
-                                    <span class="badge bg-light text-dark border px-2 py-1 font-monospace fw-bold">
-                                        <i class="bi bi-door-open-fill text-emerald me-1"></i>Max {{ $film->limit_penggunaan ?? 1 }} Room
-                                    </span>
-                                    @if($film->sisa_slot > 0)
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small" style="font-size: 0.72rem;">
-                                            <i class="bi bi-check-circle-fill me-1"></i>Sisa {{ $film->sisa_slot }} Slot
+                                    @forelse($cabangs as $cabang)
+                                        @php
+                                            $stokVal = $film->getLimitPenggunaanForCabang($cabang->id);
+                                            $activeVal = $film->getActiveRoomsCount($cabang->id);
+                                            $sisaVal = max(0, $stokVal - $activeVal);
+                                        @endphp
+                                        <div class="d-flex align-items-center justify-content-between gap-2 p-1 rounded bg-light border" style="font-size: 0.72rem;">
+                                            <span class="text-truncate fw-semibold text-dark" style="max-width: 90px;" title="{{ $cabang->nama_cabang }}">
+                                                <i class="bi bi-shop text-emerald me-0.5"></i>{{ $cabang->nama_cabang }}
+                                            </span>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <span class="badge bg-white text-dark border font-monospace fw-bold">{{ $stokVal }} Room</span>
+                                                @if($sisaVal > 0)
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle" title="Sisa {{ $sisaVal }} room">Sisa {{ $sisaVal }}</span>
+                                                @else
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle" title="Slot penuh">Penuh</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <span class="badge bg-light text-dark border px-2 py-1 font-monospace fw-bold">
+                                            Max {{ $film->limit_penggunaan ?? 1 }} Room
                                         </span>
-                                    @else
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small" style="font-size: 0.72rem;">
-                                            <i class="bi bi-x-circle-fill me-1"></i>Slot Penuh ({{ $film->limit_penggunaan }}/{{ $film->limit_penggunaan }})
-                                        </span>
-                                    @endif
+                                    @endforelse
                                 </div>
                             </td>
                             <td class="text-end pe-4">
@@ -228,22 +240,40 @@
                                                     </select>
                                                 </div>
 
-                                                <!-- Sutradara, Tahun Rilis & Limit Penggunaan (Stok Room) -->
-                                                <div class="col-md-5">
+                                                <!-- Sutradara & Tahun Rilis -->
+                                                <div class="col-md-7">
                                                     <label class="form-label small fw-semibold">Sutradara</label>
                                                     <input type="text" name="sutradara" class="form-control rounded-3" value="{{ $film->sutradara }}" placeholder="Contoh: Christopher Nolan">
                                                 </div>
-                                                <div class="col-md-3">
+                                                <div class="col-md-5">
                                                     <label class="form-label small fw-semibold">Tahun Rilis</label>
                                                     <input type="number" name="tahun_rilis" class="form-control rounded-3" value="{{ $film->tahun_rilis }}" min="1900" max="2099" placeholder="2024">
                                                 </div>
-                                                <div class="col-md-4">
-                                                    <label class="form-label small fw-semibold">Limit Room (Stok) <span class="text-danger">*</span></label>
-                                                    <div class="input-group">
-                                                        <input type="number" name="limit_penggunaan" class="form-control rounded-start" min="1" max="100" value="{{ $film->limit_penggunaan ?? 1 }}" required>
-                                                        <span class="input-group-text bg-light text-muted small">Room</span>
+
+                                                <!-- Stok / Limit Room Bersamaan Terpisah Per Outlet -->
+                                                <div class="col-12">
+                                                    <label class="form-label small fw-semibold text-muted d-flex justify-content-between align-items-center mb-1">
+                                                        <span>Stok / Limit Room Bersamaan Per Outlet <span class="text-danger">*</span></span>
+                                                        <span class="badge bg-emerald-subtle text-emerald" style="font-size: 0.68rem;">Independen Tiap Outlet</span>
+                                                    </label>
+                                                    <div class="p-3 bg-light rounded-3 border">
+                                                        <div class="row g-2">
+                                                            @foreach($cabangs as $cabang)
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label small text-dark fw-semibold mb-1">
+                                                                        <i class="bi bi-shop me-1 text-emerald"></i>{{ $cabang->nama_cabang }}
+                                                                    </label>
+                                                                    <div class="input-group input-group-sm">
+                                                                        <input type="number" name="stok_cabang[{{ $cabang->id }}]" class="form-control text-end fw-bold font-monospace" min="0" max="100" value="{{ $film->getStokCabang($cabang->id, $film->limit_penggunaan ?? 5) }}" required>
+                                                                        <span class="input-group-text bg-white text-muted">Room</span>
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                        <small class="text-muted d-block mt-2" style="font-size: 0.72rem;">
+                                                            <i class="bi bi-info-circle me-1"></i>Stok dikelola terpisah per outlet. Jika pemakaian di Outlet A berkurang/bertambah, stok Outlet B tidak terpengaruh.
+                                                        </small>
                                                     </div>
-                                                    <small class="text-muted d-block" style="font-size: 0.72rem;">Maksimal room bersamaan</small>
                                                 </div>
 
                                                 <!-- Durasi & Harga per Menit (Auto-Calculated) -->
@@ -420,18 +450,28 @@
                                 <dd class="col-sm-7">{{ $film->tahun_rilis ?: '-' }}</dd>
                                 <dt class="col-sm-5 text-muted">Durasi</dt>
                                 <dd class="col-sm-7">{{ $film->durasi_formatted }}</dd>
-                                <dt class="col-sm-5 text-muted">Limit Room (Stok)</dt>
+                                <dt class="col-sm-5 text-muted">Stok Per Outlet</dt>
                                 <dd class="col-sm-7">
-                                    <strong class="text-dark">{{ $film->limit_penggunaan ?? 1 }} Room Bersamaan</strong>
-                                    @if($film->sisa_slot > 0)
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1 small">
-                                            Tersedia {{ $film->sisa_slot }} Slot
-                                        </span>
-                                    @else
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill ms-1 small">
-                                            Penuh (0 Slot)
-                                        </span>
-                                    @endif
+                                    <div class="d-flex flex-column gap-1">
+                                        @foreach($cabangs as $cabang)
+                                            @php
+                                                $stokVal = $film->getLimitPenggunaanForCabang($cabang->id);
+                                                $activeVal = $film->getActiveRoomsCount($cabang->id);
+                                                $sisaVal = max(0, $stokVal - $activeVal);
+                                            @endphp
+                                            <div class="d-flex justify-content-between align-items-center bg-light p-1 px-2 rounded border small" style="font-size: 0.75rem;">
+                                                <span class="fw-semibold text-dark"><i class="bi bi-shop text-emerald me-1"></i>{{ $cabang->nama_cabang }}</span>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <span class="badge bg-white text-dark border font-monospace fw-bold">{{ $stokVal }} Room</span>
+                                                    @if($sisaVal > 0)
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Sisa {{ $sisaVal }}</span>
+                                                    @else
+                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Penuh</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 </dd>
                                 <dt class="col-sm-5 text-muted">Tarif per Menit</dt>
                                 <dd class="col-sm-7">{{ $film->harga_per_menit_format }}</dd>
@@ -474,7 +514,6 @@
                 <div class="modal-header border-bottom-0 pb-0">
                     <div>
                         <h5 class="modal-title fw-bold text-heading">Tambah Film Bioskop Baru</h5>
-                        <p class="text-muted small mb-0">Cover akan otomatis dikompres ke &le; 500 KB dan diverifikasi anti-pemalsuan ekstensi.</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -497,22 +536,36 @@
                             </select>
                         </div>
 
-                        <!-- Sutradara, Tahun Rilis & Limit Penggunaan (Stok Room) -->
-                        <div class="col-md-5">
+                        <!-- Sutradara & Tahun Rilis -->
+                        <div class="col-md-7">
                             <label class="form-label small fw-semibold">Sutradara</label>
                             <input type="text" name="sutradara" class="form-control rounded-3" placeholder="Nama sutradara">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-5">
                             <label class="form-label small fw-semibold">Tahun Rilis</label>
                             <input type="number" name="tahun_rilis" class="form-control rounded-3" min="1900" max="2099" value="{{ date('Y') }}" placeholder="2024">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Limit Room (Stok) <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="number" name="limit_penggunaan" class="form-control rounded-start" min="1" max="100" value="5" placeholder="5" required>
-                                <span class="input-group-text bg-light text-muted small">Room</span>
+
+                        <!-- Stok / Limit Room Bersamaan Terpisah Per Outlet -->
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold text-muted d-flex justify-content-between align-items-center mb-1">
+                                <span>Stok / Limit Room Bersamaan Per Outlet <span class="text-danger">*</span></span>
+                            </label>
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="row g-2">
+                                    @foreach($cabangs as $cabang)
+                                        <div class="col-md-6">
+                                            <label class="form-label small text-dark fw-semibold mb-1">
+                                                <i class="bi bi-shop me-1 text-emerald"></i>{{ $cabang->nama_cabang }}
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" name="stok_cabang[{{ $cabang->id }}]" class="form-control text-end fw-bold font-monospace" min="0" max="100" value="{{ old('stok_cabang.' . $cabang->id, 5) }}" required>
+                                                <span class="input-group-text bg-white text-muted">Room</span>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
-                            <small class="text-muted d-block" style="font-size: 0.72rem;">Maksimal room bersamaan</small>
                         </div>
 
                         <!-- Durasi & Harga per Menit (Auto-Calculated) -->

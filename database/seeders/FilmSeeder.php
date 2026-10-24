@@ -85,6 +85,19 @@ class FilmSeeder extends Seeder
             );
 
             $film->genres()->sync($genreIds);
+
+            $cabangs = \App\Models\TokoCabang::all();
+            foreach ($cabangs as $cabang) {
+                \App\Models\FilmStokCabang::firstOrCreate(
+                    [
+                        'film_id' => $film->id,
+                        'toko_cabang_id' => $cabang->id,
+                    ],
+                    [
+                        'stok' => $film->limit_penggunaan ?? 5,
+                    ]
+                );
+            }
         }
     }
 }

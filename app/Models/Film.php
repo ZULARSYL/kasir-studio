@@ -39,6 +39,18 @@ class Film extends Model
         return $this->belongsToMany(GenreFilm::class, 'film_genre', 'film_id', 'genre_film_id');
     }
 
+    public function stokCabangs()
+    {
+        return $this->hasMany(FilmStokCabang::class, 'film_id');
+    }
+
+    public function tokoCabangs()
+    {
+        return $this->belongsToMany(TokoCabang::class, 'film_stok_cabangs', 'film_id', 'toko_cabang_id')
+            ->withPivot('stok')
+            ->withTimestamps();
+    }
+
     public function getPosterUrlAttribute(): string
     {
         if ($this->poster && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->poster)) {
@@ -95,18 +107,57 @@ class Film extends Model
     }
 
     /**
-     * Hitung berapa banyak room yang sedang aktif menayangkan film ini saat ini (concurrent).
+     * Dapatkan stok / limit penggunaan room bersamaan untuk outlet tertentu.
+     * Jika tidak diset khusus untuk outlet tsb, fallback ke limit_penggunaan film.
      */
-    public function getActiveRoomsCount(): int
+    public function getLimitPenggunaanForCabang(?int $tokoCabangId = null): int
+    {
+        if ($tokoCabangId !== null) {
+            if ($this->relationLoaded('stokCabangs')) {
+                $cabangStock = $this->stokCabangs->firstWhere('toko_cabang_id', $tokoCabangId);
+                if ($cabangStock !== null) {
+                    return max(0, (int) $cabangStock->stok);
+                }
+            } else {
+                $stok = FilmStokCabang::where('film_id', $this->id)
+                    ->where('toko_cabang_id', $tokoCabangId)
+                    ->value('stok');
+                if ($stok !== null) {
+                    return max(0, (int) $stok);
+                }
+            }
+        }
+
+        return max(1, (int) ($this->limit_penggunaan ?? 1));
+    }
+
+    /**
+     * Helper untuk mengambil stok cabang atau nilai default.
+     */
+    public function getStokCabang(int $tokoCabangId, int $default = 1): int
+    {
+        return $this->getLimitPenggunaanForCabang($tokoCabangId);
+    }
+
+    /**
+     * Hitung berapa banyak room yang sedang aktif menayangkan film ini saat ini (concurrent).
+     * Jika $tokoCabangId diberikan, hitung HANYA room pada outlet tersebut.
+     */
+    public function getActiveRoomsCount(?int $tokoCabangId = null): int
     {
         $now = Carbon::now();
 
-        $activeTrxs = Transaksi::where('film_id', $this->id)
+        $query = Transaksi::where('film_id', $this->id)
             ->where('status', 'selesai')
             ->whereNotNull('room_id')
             ->where('waktu_transaksi', '>=', $now->copy()->subHours(24))
-            ->where('waktu_transaksi', '<=', $now)
-            ->get();
+            ->where('waktu_transaksi', '<=', $now);
+
+        if ($tokoCabangId !== null) {
+            $query->where('toko_cabang_id', $tokoCabangId);
+        }
+
+        $activeTrxs = $query->get();
 
         $activeRoomIds = [];
         foreach ($activeTrxs as $trx) {
@@ -136,19 +187,32 @@ class Film extends Model
     }
 
     /**
-     * Sisa slot room yang masih bisa menggunakan film ini secara bersamaan.
+     * Sisa slot room yang masih bisa menggunakan film ini secara bersamaan pada outlet tertentu.
      */
-    public function getSisaSlotAttribute(): int
+    public function getSisaSlot(?int $tokoCabangId = null): int
     {
-        $limit = max(1, (int) ($this->limit_penggunaan ?? 1));
-        return max(0, $limit - $this->active_rooms_count);
+        $limit = $this->getLimitPenggunaanForCabang($tokoCabangId);
+        $active = $this->getActiveRoomsCount($tokoCabangId);
+        return max(0, $limit - $active);
     }
 
     /**
-     * Cek apakah slot penggunaan film masih tersedia untuk dipesan.
+     * Accessor untuk sisa slot room.
      */
-    public function isAvailableForBooking(): bool
+    public function getSisaSlotAttribute(): int
     {
-        return $this->status === 'tersedia' && $this->sisa_slot > 0;
+        if (isset($this->attributes['sisa_slot'])) {
+            return (int) $this->attributes['sisa_slot'];
+        }
+
+        return $this->getSisaSlot();
+    }
+
+    /**
+     * Cek apakah slot penggunaan film masih tersedia untuk dipesan pada cabang tertentu.
+     */
+    public function isAvailableForBooking(?int $tokoCabangId = null): bool
+    {
+        return $this->status === 'tersedia' && $this->getSisaSlot($tokoCabangId) > 0;
     }
 }
