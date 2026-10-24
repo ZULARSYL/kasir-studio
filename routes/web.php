@@ -193,6 +193,8 @@ Route::middleware(['auth', 'role:admin', 'menu.access'])
             Route::post('/cek-promo', [KasirController::class, 'cekPromo'])->name('cek-promo');
             Route::post('/checkout', [KasirController::class, 'checkout'])->name('checkout');
             Route::get('/struk/{id}', [KasirController::class, 'struk'])->name('struk');
+            Route::post('/room/{roomId}/hentikan', [KasirController::class, 'hentikanPemutaran'])->name('room.hentikan');
+            Route::post('/pesanan-cafe/simpan', [KasirController::class, 'simpanPesananCafe'])->name('pesanan-cafe.simpan');
         });
     });
 
@@ -226,4 +228,10 @@ Route::middleware(['auth', 'role:admin,kasir'])
         // Fitur Pindah Room (Move Room)
         Route::get('/move-room/rooms/{roomId}', [KasirController::class, 'getAvailableRoomsForMove'])->name('move-room.rooms');
         Route::post('/move-room', [KasirController::class, 'moveRoom'])->name('move-room.save');
+
+        // Fitur Berhentikan Pemutaran Lebih Awal (Early Stop)
+        Route::post('/room/{roomId}/hentikan', [KasirController::class, 'hentikanPemutaran'])->name('room.hentikan');
+
+        // Fitur Pesanan Tambahan Cafe (Khusus Makanan & Minuman)
+        Route::post('/pesanan-cafe/simpan', [KasirController::class, 'simpanPesananCafe'])->name('pesanan-cafe.simpan');
     });

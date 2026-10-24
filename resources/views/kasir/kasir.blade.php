@@ -325,28 +325,75 @@
             </div>
         @endif
 
+        @if($pesananCafeContext)
+            <!-- ALERT BANNER KHUSUS MODE PESANAN CAFE TAMBAHAN -->
+            <div class="alert alert-primary border-0 shadow-sm rounded-4 mb-3 d-flex flex-wrap align-items-center justify-content-between p-3 gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="badge bg-primary p-2.5 rounded-3 fs-5 shadow-sm text-white">
+                        <i class="bi bi-cup-hot-fill"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h6 class="fw-bold mb-0 text-dark">Mode Pesanan Cafe (F&amp;B) &mdash; Studio {{ $pesananCafeContext['room_nama'] }}</h6>
+                            <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 font-monospace">Khusus Makanan &amp; Minuman</span>
+                        </div>
+                        <div class="small text-muted mt-0.5">
+                            Nota: <strong class="text-dark font-monospace">#{{ $pesananCafeContext['nomor_transaksi'] }}</strong> &bull; 
+                            Pelanggan: <strong class="text-dark">{{ $pesananCafeContext['nama_pelanggan'] }}</strong> &bull; 
+                            Film Berjalan: <strong class="text-dark">{{ $pesananCafeContext['film_judul'] }}</strong> &bull;
+                            Sisa Waktu: <strong class="text-danger font-monospace">{{ $pesananCafeContext['sisa_menit'] }} Menit</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{{ route('kasir.dashboard') }}" class="btn btn-outline-secondary btn-sm rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5" title="Kembali ke Dashboard Kasir">
+                        <i class="bi bi-arrow-left"></i>
+                        <span>Kembali ke Dashboard</span>
+                    </a>
+                </div>
+            </div>
+        @endif
+
         <!-- POS Nav Tabs / Stepper (Responsif & Cepat Beralih) -->
         <div class="card border-0 shadow-sm rounded-4 mb-3 bg-white p-2">
             <div class="nav nav-pills pos-nav-pills gap-2 flex-nowrap overflow-x-auto" id="posStepTabs" role="tablist">
-                <button class="nav-link active rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-film-btn" data-bs-toggle="pill" data-bs-target="#tab-film-pane" type="button" role="tab">
-                    <i class="bi bi-film"></i>
-                    <span>{{ $gantiFilmContext ? 'Pilih Film Pengganti' : 'Pilih Film Studio' }}</span>
-                    <span class="badge bg-emerald text-white rounded-circle ms-1 d-none" id="filmStepChecked"><i class="bi bi-check"></i></span>
-                </button>
-                <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-room-btn" data-bs-toggle="pill" data-bs-target="#tab-room-pane" type="button" role="tab">
-                    <i class="bi bi-door-open-fill"></i>
-                    <span>Pilih Room Studio Tersedia</span>
-                    @if($gantiFilmContext)
-                        <span class="badge bg-warning text-dark rounded-pill ms-1 font-monospace" style="font-size: 0.72rem;"><i class="bi bi-lock-fill me-0.5"></i>Terkunci: {{ $gantiFilmContext['room_nama'] }}</span>
-                    @else
-                        <span class="badge bg-emerald text-white rounded-circle ms-1 d-none" id="roomStepChecked"><i class="bi bi-check"></i></span>
-                    @endif
-                </button>
-                <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-cafe-btn" data-bs-toggle="pill" data-bs-target="#tab-cafe-pane" type="button" role="tab">
-                    <i class="bi bi-cup-hot-fill"></i>
-                    <span>Pesan Makanan & Minuman Cafe</span>
-                    <span class="badge bg-warning text-dark rounded-pill ms-1 d-none font-monospace" id="cafeCountBadge">0</span>
-                </button>
+                @if($pesananCafeContext)
+                    <button class="nav-link disabled rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap opacity-50" id="tab-film-btn" type="button" disabled title="Tidak dapat memilih film untuk pesanan cafe tambahan">
+                        <i class="bi bi-film"></i>
+                        <span>Film (Terkunci)</span>
+                        <span class="badge bg-secondary text-white rounded-pill ms-1 font-monospace" style="font-size: 0.72rem;"><i class="bi bi-lock-fill me-0.5"></i>{{ $pesananCafeContext['film_judul'] }}</span>
+                    </button>
+                    <button class="nav-link disabled rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap opacity-50" id="tab-room-btn" type="button" disabled title="Room telah terkunci pada penayangan aktif">
+                        <i class="bi bi-door-open-fill"></i>
+                        <span>Room (Terkunci)</span>
+                        <span class="badge bg-warning text-dark rounded-pill ms-1 font-monospace" style="font-size: 0.72rem;"><i class="bi bi-lock-fill me-0.5"></i>{{ $pesananCafeContext['room_nama'] }}</span>
+                    </button>
+                    <button class="nav-link active rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-cafe-btn" data-bs-toggle="pill" data-bs-target="#tab-cafe-pane" type="button" role="tab">
+                        <i class="bi bi-cup-hot-fill"></i>
+                        <span>Pesan Makanan & Minuman Cafe</span>
+                        <span class="badge bg-warning text-dark rounded-pill ms-1 font-monospace" id="cafeCountBadge">0</span>
+                    </button>
+                @else
+                    <button class="nav-link active rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-film-btn" data-bs-toggle="pill" data-bs-target="#tab-film-pane" type="button" role="tab">
+                        <i class="bi bi-film"></i>
+                        <span>{{ $gantiFilmContext ? 'Pilih Film Pengganti' : 'Pilih Film Studio' }}</span>
+                        <span class="badge bg-emerald text-white rounded-circle ms-1 d-none" id="filmStepChecked"><i class="bi bi-check"></i></span>
+                    </button>
+                    <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-room-btn" data-bs-toggle="pill" data-bs-target="#tab-room-pane" type="button" role="tab">
+                        <i class="bi bi-door-open-fill"></i>
+                        <span>Pilih Room Studio Tersedia</span>
+                        @if($gantiFilmContext)
+                            <span class="badge bg-warning text-dark rounded-pill ms-1 font-monospace" style="font-size: 0.72rem;"><i class="bi bi-lock-fill me-0.5"></i>Terkunci: {{ $gantiFilmContext['room_nama'] }}</span>
+                        @else
+                            <span class="badge bg-emerald text-white rounded-circle ms-1 d-none" id="roomStepChecked"><i class="bi bi-check"></i></span>
+                        @endif
+                    </button>
+                    <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-cafe-btn" data-bs-toggle="pill" data-bs-target="#tab-cafe-pane" type="button" role="tab">
+                        <i class="bi bi-cup-hot-fill"></i>
+                        <span>Pesan Makanan & Minuman Cafe</span>
+                        <span class="badge bg-warning text-dark rounded-pill ms-1 d-none font-monospace" id="cafeCountBadge">0</span>
+                    </button>
+                @endif
             </div>
         </div>
 
@@ -360,7 +407,7 @@
                     <!-- =================================================================== -->
                     <!-- TAB 1: PILIH FILM STUDIO (MIRIP PERSIS SIDEBAR/KASIR.PNG)           -->
                     <!-- =================================================================== -->
-                    <div class="tab-pane fade show active" id="tab-film-pane" role="tabpanel" tabindex="0">
+                    <div class="tab-pane fade {{ !$pesananCafeContext ? 'show active' : '' }}" id="tab-film-pane" role="tabpanel" tabindex="0">
                         
                         <!-- Search & Category Filter Bar (Mirip Bar Atas di kasir.png) -->
                         <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3 pos-filter-bar">
@@ -562,29 +609,43 @@
                                                 <i class="bi bi-people me-1"></i>Kapasitas: <strong>{{ $room->kapasitas }} Orang</strong>
                                             </div>
 
-                                            <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
-                                                <span class="small text-muted">Status:</span>
-                                                <div class="d-flex align-items-center gap-1.5">
+                                            <div class="pos-room-card-footer mt-auto pt-2 border-top">
+                                                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                                    <span class="small text-muted">Status</span>
                                                     <strong class="{{ $isOccupied ? 'text-danger' : 'text-emerald' }} small">
                                                         {{ $isOccupied ? 'Sedang Digunakan' : 'Siap Digunakan' }}
                                                     </strong>
-                                                    @if($isOccupied)
-                                                        <button type="button" 
-                                                           class="btn btn-sm btn-info text-white fw-bold rounded-pill px-2.5 py-0.5 shadow-sm btn-open-move-room"
-                                                           style="font-size: 0.72rem; z-index: 5;"
+                                                </div>
+                                                @if($isOccupied)
+                                                    <div class="pos-room-card-actions">
+                                                        <button type="button"
+                                                           class="btn btn-sm btn-info text-white fw-bold rounded-3 shadow-sm pos-room-card-action btn-open-move-room"
                                                            data-room-id="{{ $room->id }}"
                                                            data-room-nama="{{ $room->nama }}"
                                                            title="Pindah Room / Perpindahan Ruangan">
-                                                            <i class="bi bi-arrow-left-right"></i> Pindah Room
+                                                            <span>Pindah Room</span>
                                                         </button>
-                                                        <a href="{{ route('kasir.kasir', ['mode' => 'ganti_film', 'room_id' => $room->id]) }}" 
-                                                           class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-2.5 py-0.5 shadow-sm"
-                                                           style="font-size: 0.72rem; z-index: 5;"
+                                                        <a href="{{ route('kasir.kasir', ['mode' => 'ganti_film', 'room_id' => $room->id]) }}"
+                                                           class="btn btn-sm btn-warning text-dark fw-bold rounded-3 shadow-sm pos-room-card-action"
                                                            title="Ganti Film yang sedang ditayangkan">
-                                                            <i class="bi bi-arrow-repeat"></i> Ganti Film
+                                                            <span>Ganti Film</span>
                                                         </a>
-                                                    @endif
-                                                </div>
+                                                        <button type="button"
+                                                           class="btn btn-sm btn-danger text-white fw-bold rounded-3 shadow-sm pos-room-card-action btn-open-hentikan-pemutaran"
+                                                           data-room-id="{{ $room->id }}"
+                                                           data-room-nama="{{ $room->nama }}"
+                                                           data-film-judul="Film Studio"
+                                                           data-sisa-waktu="Waktu Berjalan"
+                                                           title="Hentikan pemutaran jika penonton telah selesai menonton lebih awal">
+                                                            <span>Hentikan</span>
+                                                        </button>
+                                                        <a href="{{ route('kasir.kasir', ['mode' => 'pesanan_cafe', 'room_id' => $room->id]) }}"
+                                                           class="btn btn-sm btn-outline-primary fw-bold rounded-3 shadow-sm pos-room-card-action"
+                                                           title="Buat Pesanan Baru (Khusus Makanan & Minuman Cafe)">
+                                                            <span>Pesan Cafe</span>
+                                                        </a>
+                                                    </div>
+                                                @endif
                                             </div>
 
                                             <!-- Selection Checkmark -->
@@ -606,7 +667,7 @@
                     <!-- =================================================================== -->
                     <!-- TAB 3: PESAN MAKANAN & MINUMAN CAFE (OPSIONAL)                      -->
                     <!-- =================================================================== -->
-                    <div class="tab-pane fade" id="tab-cafe-pane" role="tabpanel" tabindex="0">
+                    <div class="tab-pane fade {{ $pesananCafeContext ? 'show active' : '' }}" id="tab-cafe-pane" role="tabpanel" tabindex="0">
                         <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                                 <div>
@@ -827,6 +888,112 @@
                         <button type="button" class="btn btn-warning text-dark w-100 py-3 rounded-3 shadow-sm fw-bold fs-6 d-flex align-items-center justify-content-center gap-2" id="btnProsesGantiFilm" disabled>
                             <i class="bi bi-arrow-repeat fs-5"></i>
                             <span>Konfirmasi Pergantian Film</span>
+                        </button>
+                    </div>
+                @elseif($pesananCafeContext)
+                    <!-- PANEL KERANJANG KHUSUS PESANAN CAFE TAMBAHAN -->
+                    <div class="card border-0 shadow-sm rounded-4 sticky-top pos-cart-panel bg-white p-4" style="top: 85px;">
+                        <!-- Header Mode Pesanan Cafe -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-primary text-white fw-bold mb-1"><i class="bi bi-cup-hot-fill me-1"></i>PESANAN CAFE TAMBAHAN</span>
+                                <h5 class="fw-bold text-heading mb-0">{{ $pesananCafeContext['room_nama'] }}</h5>
+                            </div>
+                            <a href="{{ route('kasir.dashboard') }}" class="btn btn-sm btn-outline-danger rounded-3" title="Kembali ke Dashboard Kasir">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        </div>
+
+                        <!-- Info Room & Sesi Berjalan -->
+                        <div class="card bg-light border-0 rounded-3 p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                                <span>No. Transaksi</span>
+                                <strong class="font-monospace text-dark">#{{ $pesananCafeContext['nomor_transaksi'] }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                                <span>Pelanggan</span>
+                                <strong class="text-dark">{{ $pesananCafeContext['nama_pelanggan'] }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                                <span>Film Berjalan</span>
+                                <span class="fw-semibold text-danger"><i class="bi bi-film me-1"></i>{{ $pesananCafeContext['film_judul'] }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small text-muted">
+                                <span>Sisa Waktu Nonton</span>
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle font-monospace"><i class="bi bi-clock me-1"></i>{{ $pesananCafeContext['sisa_menit'] }} Menit</span>
+                            </div>
+                        </div>
+
+                        <!-- Notice: Film & Room Dikunci -->
+                        <div class="alert alert-warning py-2 px-3 rounded-3 mb-3 small d-flex align-items-center gap-2 border-0 bg-warning-subtle text-warning-emphasis">
+                            <i class="bi bi-info-circle-fill fs-6 flex-shrink-0"></i>
+                            <span>Hanya pesanan cafe (makanan &amp; minuman) yang dapat ditambahkan pada sesi room ini.</span>
+                        </div>
+
+                        <!-- Keranjang Item Cafe -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold text-dark mb-0 fs-6">Item Cafe Dipilih</h6>
+                            <span class="badge bg-primary rounded-pill font-monospace" id="pesananCafeItemCountBadge">0 Item</span>
+                        </div>
+
+                        <!-- Container Item Cafe Terpilih -->
+                        <div class="pos-cart-items-box border rounded-3 p-2.5 mb-3 bg-light-subtle" style="max-height: 220px; overflow-y: auto;">
+                            <!-- Empty prompt if no cafe items -->
+                            <div id="emptyPesananCafePrompt" class="text-center py-4 text-muted">
+                                <i class="bi bi-cup-straw fs-2 d-block opacity-40 mb-1"></i>
+                                <div class="small fw-semibold">Belum Ada Item Cafe Dipilih</div>
+                                <div class="small opacity-75" style="font-size: 0.75rem;">Klik makanan atau minuman dari katalog di samping</div>
+                            </div>
+                            <!-- Dynamic Selected Cafe Items List -->
+                            <div id="listPesananCafeItems" style="display: none;"></div>
+                        </div>
+
+                        <!-- Kalkulasi & Total Biaya Cafe -->
+                        <div class="card border rounded-3 p-3 mb-3 bg-white">
+                            <div class="d-flex justify-content-between align-items-center small mb-1.5">
+                                <span class="text-muted">Subtotal Cafe Baru</span>
+                                <span class="font-monospace fw-semibold text-dark" id="lblPesananCafeSubtotal">Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small mb-2 pb-2 border-bottom">
+                                <span class="text-muted">Diskon Voucher</span>
+                                <span class="font-monospace text-danger" id="lblPesananCafeDiskon">- Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-heading fs-6">Total Tagihan</span>
+                                <span class="font-monospace fw-bold text-emerald fs-5" id="lblPesananCafeTotalFinal">Rp 0</span>
+                            </div>
+                        </div>
+
+                        <!-- Metode Pembayaran & Uang Diterima -->
+                        <div class="card bg-light border-0 rounded-3 p-3 mb-3">
+                            <div class="mb-2.5">
+                                <label class="text-uppercase text-muted fw-bold mb-1 pos-micro-label">Metode Pembayaran</label>
+                                <select id="selectPesananCafeMetodeBayar" class="form-select form-select-sm fw-semibold">
+                                    @foreach($tipePembayarans as $tp)
+                                        <option value="{{ $tp->id }}" data-metode="{{ strtolower($tp->metode_pembayaran) }}">
+                                            {{ $tp->metode_pembayaran }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-7">
+                                    <label class="text-uppercase text-muted fw-bold mb-1 pos-micro-label">Uang Diterima</label>
+                                    <input type="text" inputmode="numeric" id="inputPesananCafeUangDiterima" class="form-control form-control-sm font-monospace fw-bold text-end" placeholder="0">
+                                </div>
+                                <div class="col-5">
+                                    <label class="text-uppercase text-muted fw-bold mb-1 pos-micro-label">Kembalian</label>
+                                    <div class="pos-change-box rounded-3 p-1.5 text-center bg-emerald-subtle border border-emerald" style="min-height: 31px;">
+                                        <span class="fw-bold text-emerald font-monospace small" id="lblPesananCafeKembalian">Rp 0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tombol Simpan Pesanan Cafe -->
+                        <button type="button" class="btn btn-primary w-100 py-3 rounded-3 shadow-sm fw-bold fs-6 d-flex align-items-center justify-content-center gap-2" id="btnSimpanPesananCafe" disabled>
+                            <i class="bi bi-check2-circle fs-5"></i>
+                            <span>Simpan &amp; Bayar Pesanan Cafe</span>
                         </button>
                     </div>
                 @else
@@ -1273,6 +1440,7 @@
 
 </div>
 @include('kasir.partials.modal-move-room')
+@include('kasir.partials.modal-hentikan-pemutaran')
 @endsection
 
 @section('styles')
@@ -1462,6 +1630,31 @@
         border: 2px solid #10b981 !important;
         box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18) !important;
         background-color: #ecfdf5 !important;
+    }
+    .pos-room-card-footer > .d-flex {
+        min-height: 24px;
+    }
+    .pos-room-card-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+    .pos-room-card-action {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.5rem;
+        white-space: nowrap;
+        font-size: 0.75rem;
+    }
+    @media (max-width: 359.98px) {
+        .pos-room-card-action {
+            font-size: 0.68rem;
+            gap: 0.25rem;
+            padding-inline: 0.25rem;
+        }
     }
 
     /* POS Cart Panel (Right Column Sesuai sidebar/kasir.png) */
@@ -1658,6 +1851,7 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     window.gantiFilmContext = @json($gantiFilmContext);
+    window.pesananCafeContext = @json($pesananCafeContext);
 
     const gantiFilmState = window.gantiFilmContext ? {
         transaksiId: window.gantiFilmContext.transaksi_id,
@@ -1814,6 +2008,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
+            if (window.pesananCafeContext) {
+                alert(`Perhatian: Anda sedang dalam mode pesanan cafe tambahan untuk "${window.pesananCafeContext.room_nama}".\n\nFilm tidak dapat dipilih atau diubah pada sesi ini.`);
+                return;
+            }
+
             document.querySelectorAll('.movie-card').forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
 
@@ -1865,6 +2064,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // -------------------------------------------------------------
     document.querySelectorAll('.room-available').forEach(card => {
         card.addEventListener('click', function () {
+            if (window.pesananCafeContext) {
+                alert(`Perhatian: Ruangan studio telah dikunci pada "${window.pesananCafeContext.room_nama}".\n\nAnda tidak dapat mengubah ruangan pada pesanan tambahan ini.`);
+                return;
+            }
+
             document.querySelectorAll('.room-available').forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
 
@@ -1979,6 +2183,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // RENDER KERANJANG BELANJA (CURRENT CART)
     // -------------------------------------------------------------
     function renderCart() {
+        if (window.pesananCafeContext) {
+            renderPesananCafeCart();
+            return;
+        }
+
         const cartEmpty = document.getElementById('cartEmptyPlaceholder');
         const cartFilm = document.getElementById('cartItemFilm');
         const cartRoom = document.getElementById('cartItemRoom');
@@ -2800,6 +3009,270 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert('Gagal memproses pergantian film. Silakan periksa koneksi atau coba lagi.');
             });
         });
+    }
+
+    // -------------------------------------------------------------
+    // LOGIKA MODE PESANAN CAFE TAMBAHAN (ROOM SEDANG TERPAKAI)
+    // -------------------------------------------------------------
+    function renderPesananCafeCart() {
+        if (!window.pesananCafeContext) return;
+
+        const emptyPrompt = document.getElementById('emptyPesananCafePrompt');
+        const listContainer = document.getElementById('listPesananCafeItems');
+        const countBadge = document.getElementById('pesananCafeItemCountBadge');
+        const cafeBadge = document.getElementById('cafeCountBadge');
+        const lblSubtotal = document.getElementById('lblPesananCafeSubtotal');
+        const lblDiskon = document.getElementById('lblPesananCafeDiskon');
+        const lblTotal = document.getElementById('lblPesananCafeTotalFinal');
+        const btnSubmit = document.getElementById('btnSimpanPesananCafe');
+
+        const items = Object.values(orderState.cafeItems);
+        let subtotal = 0;
+        let totalQty = 0;
+
+        if (items.length === 0) {
+            if (emptyPrompt) emptyPrompt.style.display = 'block';
+            if (listContainer) {
+                listContainer.style.display = 'none';
+                listContainer.innerHTML = '';
+            }
+            if (countBadge) countBadge.textContent = '0 Item';
+            if (cafeBadge) cafeBadge.classList.add('d-none');
+            if (lblSubtotal) lblSubtotal.textContent = 'Rp 0';
+            if (lblDiskon) lblDiskon.textContent = '- Rp 0';
+            if (lblTotal) lblTotal.textContent = 'Rp 0';
+            if (btnSubmit) btnSubmit.disabled = true;
+            updatePesananCafeKembalian(0);
+            return;
+        }
+
+        if (emptyPrompt) emptyPrompt.style.display = 'none';
+        if (listContainer) {
+            listContainer.style.display = 'block';
+            listContainer.innerHTML = '';
+        }
+
+        items.forEach(item => {
+            const lineTotal = item.qty * item.harga_satuan;
+            subtotal += lineTotal;
+            totalQty += item.qty;
+
+            if (listContainer) {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'd-flex justify-content-between align-items-center mb-2 pb-2 border-bottom bg-white p-2 rounded-2';
+                itemEl.innerHTML = `
+                    <div class="overflow-hidden me-2" style="max-width: 55%;">
+                        <div class="fw-bold text-dark text-truncate small">${item.nama}</div>
+                        <div class="small text-muted font-monospace">${formatRupiah(item.harga_satuan)} &times; ${item.qty}</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-0.5 btn-pesanan-cafe-minus" data-id="${item.barang_id}">-</button>
+                            <span class="fw-bold font-monospace px-1 small">${item.qty}</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-0.5 btn-pesanan-cafe-plus" data-id="${item.barang_id}">+</button>
+                        </div>
+                        <div class="fw-bold font-monospace text-emerald text-end small" style="min-width: 65px;">${formatRupiah(lineTotal)}</div>
+                        <button type="button" class="btn btn-sm text-danger p-0 btn-pesanan-cafe-remove" data-id="${item.barang_id}" title="Hapus Item">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(itemEl);
+            }
+        });
+
+        if (countBadge) countBadge.textContent = `${totalQty} Item`;
+        if (cafeBadge) {
+            cafeBadge.textContent = totalQty;
+            cafeBadge.classList.remove('d-none');
+        }
+
+        let diskon = 0;
+        if (orderState.promo) {
+            diskon = orderState.promo.diskon || 0;
+        }
+        const totalFinal = Math.max(0, subtotal - diskon);
+
+        if (lblSubtotal) lblSubtotal.textContent = formatRupiah(subtotal);
+        if (lblDiskon) lblDiskon.textContent = `- ${formatRupiah(diskon)}`;
+        if (lblTotal) lblTotal.textContent = formatRupiah(totalFinal);
+        if (btnSubmit) btnSubmit.disabled = false;
+
+        // Pasang event listener tombol plus/minus/remove
+        if (listContainer) {
+            listContainer.querySelectorAll('.btn-pesanan-cafe-minus').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = this.getAttribute('data-id');
+                    if (orderState.cafeItems[id]) {
+                        orderState.cafeItems[id].qty -= 1;
+                        if (orderState.cafeItems[id].qty <= 0) {
+                            delete orderState.cafeItems[id];
+                        }
+                        renderPesananCafeCart();
+                    }
+                });
+            });
+
+            listContainer.querySelectorAll('.btn-pesanan-cafe-plus').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = this.getAttribute('data-id');
+                    if (orderState.cafeItems[id]) {
+                        if (orderState.cafeItems[id].qty + 1 > orderState.cafeItems[id].stok) {
+                            alert(`Maksimal stok tersedia adalah ${orderState.cafeItems[id].stok}`);
+                            return;
+                        }
+                        orderState.cafeItems[id].qty += 1;
+                        renderPesananCafeCart();
+                    }
+                });
+            });
+
+            listContainer.querySelectorAll('.btn-pesanan-cafe-remove').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = this.getAttribute('data-id');
+                    delete orderState.cafeItems[id];
+                    renderPesananCafeCart();
+                });
+            });
+        }
+
+        updatePesananCafeKembalian(totalFinal);
+    }
+
+    function updatePesananCafeKembalian(totalTagihan) {
+        const inputUang = document.getElementById('inputPesananCafeUangDiterima');
+        const lblKembalian = document.getElementById('lblPesananCafeKembalian');
+        if (!inputUang || !lblKembalian) return;
+
+        const val = parseRupiah(inputUang.value);
+        const kembalian = Math.max(0, val - totalTagihan);
+        lblKembalian.textContent = formatRupiah(kembalian);
+    }
+
+    const inputPesananCafeUang = document.getElementById('inputPesananCafeUangDiterima');
+    if (inputPesananCafeUang) {
+        inputPesananCafeUang.addEventListener('input', function () {
+            const rawVal = parseRupiah(this.value);
+            this.value = rawVal > 0 ? Number(rawVal).toLocaleString('id-ID') : '';
+            const totalTagihan = parseRupiah(document.getElementById('lblPesananCafeTotalFinal')?.textContent || 0);
+            updatePesananCafeKembalian(totalTagihan);
+        });
+    }
+
+    const selectPesananCafeMetode = document.getElementById('selectPesananCafeMetodeBayar');
+    if (selectPesananCafeMetode && inputPesananCafeUang) {
+        selectPesananCafeMetode.addEventListener('change', function () {
+            const selectedOpt = this.options[this.selectedIndex];
+            const isNonTunai = !(selectedOpt?.dataset.metode || '').includes('tunai');
+            if (isNonTunai) {
+                const totalTagihan = parseRupiah(document.getElementById('lblPesananCafeTotalFinal')?.textContent || 0);
+                inputPesananCafeUang.value = totalTagihan > 0 ? Number(totalTagihan).toLocaleString('id-ID') : '';
+                updatePesananCafeKembalian(totalTagihan);
+            }
+        });
+    }
+
+    const btnSimpanPesananCafe = document.getElementById('btnSimpanPesananCafe');
+    if (btnSimpanPesananCafe) {
+        btnSimpanPesananCafe.addEventListener('click', function () {
+            if (!window.pesananCafeContext) return;
+
+            const items = Object.values(orderState.cafeItems);
+            if (items.length === 0) {
+                alert('Silakan pilih minimal 1 item makanan atau minuman cafe.');
+                return;
+            }
+
+            const selectMetode = document.getElementById('selectPesananCafeMetodeBayar');
+            const tipePembayaranId = selectMetode ? selectMetode.value : null;
+            if (!tipePembayaranId) {
+                alert('Silakan pilih metode pembayaran.');
+                return;
+            }
+
+            const inputUang = document.getElementById('inputPesananCafeUangDiterima');
+            const uangDiterima = inputUang ? parseRupiah(inputUang.value) : 0;
+            const totalTagihan = parseRupiah(document.getElementById('lblPesananCafeTotalFinal')?.textContent || 0);
+            const selectedOpt = selectMetode ? selectMetode.options[selectMetode.selectedIndex] : null;
+            const isTunai = (selectedOpt?.dataset.metode || '').includes('tunai');
+
+            if (isTunai && uangDiterima < totalTagihan) {
+                alert(`Nominal pembayaran tunai kurang!\nTotal tagihan: ${formatRupiah(totalTagihan)}\nUang diterima: ${formatRupiah(uangDiterima)}`);
+                inputUang?.focus();
+                return;
+            }
+
+            btnSimpanPesananCafe.disabled = true;
+            btnSimpanPesananCafe.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Menyimpan...';
+
+            const payload = {
+                transaksi_id: window.pesananCafeContext.transaksi_id,
+                tipe_pembayaran_id: tipePembayaranId,
+                uang_diterima: isTunai ? uangDiterima : totalTagihan,
+                promo_id: orderState.promo ? orderState.promo.id : null,
+                cafe_items: items.map(item => ({
+                    barang_id: item.barang_id,
+                    satuan_barang_id: item.satuan_barang_id,
+                    qty: item.qty,
+                    harga_satuan: item.harga_satuan
+                }))
+            };
+
+            fetch('{{ route("kasir.pesanan-cafe.simpan") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(({ status, body }) => {
+                if (status === 200 && body.status === 'success') {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Pesanan Berhasil Disimpan!',
+                            html: `Pesanan cafe untuk <strong>${window.pesananCafeContext.room_nama}</strong> telah berhasil ditambahkan.<br><br>Total Tambahan: <strong>${formatRupiah(body.data.total_tambahan)}</strong>`,
+                            showCancelButton: true,
+                            confirmButtonText: '<i class="bi bi-printer me-1"></i> Cetak Struk',
+                            cancelButtonText: 'Ke Dashboard Kasir',
+                            confirmButtonColor: '#10b981',
+                            cancelButtonColor: '#6b7280'
+                        }).then((result) => {
+                            if (result.isConfirmed && body.data.struk_url) {
+                                window.open(body.data.struk_url, '_blank');
+                            }
+                            window.location.href = '{{ route("kasir.dashboard") }}';
+                        });
+                    } else {
+                        alert(body.message || 'Pesanan cafe berhasil ditambahkan.');
+                        window.location.href = '{{ route("kasir.dashboard") }}';
+                    }
+                } else {
+                    throw new Error(body.message || 'Gagal menyimpan pesanan cafe.');
+                }
+            })
+            .catch(err => {
+                btnSimpanPesananCafe.disabled = false;
+                btnSimpanPesananCafe.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Simpan &amp; Bayar Pesanan Cafe</span>';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal Menyimpan',
+                        text: err.message || 'Terjadi kesalahan sistem saat menyimpan pesanan cafe.',
+                        confirmButtonColor: '#ef4444'
+                    });
+                } else {
+                    alert(err.message || 'Gagal menyimpan pesanan.');
+                }
+            });
+        });
+    }
+
+    if (window.pesananCafeContext) {
+        renderPesananCafeCart();
     }
 
 });

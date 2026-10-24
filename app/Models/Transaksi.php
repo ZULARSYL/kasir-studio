@@ -38,6 +38,7 @@ class Transaksi extends Model
         'status',
         'waktu_transaksi',
         'waktu_mulai_film',
+        'waktu_selesai_film',
         'catatan',
     ];
 
@@ -55,6 +56,7 @@ class Transaksi extends Model
         'kembalian' => 'decimal:2',
         'waktu_transaksi' => 'datetime',
         'waktu_mulai_film' => 'datetime',
+        'waktu_selesai_film' => 'datetime',
     ];
 
     public function filmHistories(): HasMany
