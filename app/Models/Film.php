@@ -110,7 +110,7 @@ class Film extends Model
 
         $activeRoomIds = [];
         foreach ($activeTrxs as $trx) {
-            $mulai = Carbon::parse($trx->waktu_transaksi);
+            $mulai = $trx->waktu_mulai_film ? Carbon::parse($trx->waktu_mulai_film) : Carbon::parse($trx->waktu_transaksi);
             $durasi = (int) ($trx->durasi_menit ?: ($this->durasi_menit ?? 120));
             $selesai = $mulai->copy()->addMinutes($durasi);
 

@@ -253,7 +253,17 @@
                             @endif
 
                             <!-- Card Footer Action -->
-                            <div class="mt-auto pt-2 d-flex justify-content-end">
+                            <div class="mt-auto pt-2 d-flex justify-content-between align-items-center gap-2">
+                                @if($room->is_occupied)
+                                    <a href="{{ route('kasir.kasir', ['mode' => 'ganti_film', 'room_id' => $room->id]) }}" 
+                                       class="btn btn-sm btn-warning text-dark fw-bold rounded-3 px-3 py-1.5 d-flex align-items-center gap-1.5 shadow-sm"
+                                       title="Ganti Film yang sedang ditayangkan pada room ini">
+                                        <i class="bi bi-arrow-repeat fs-6"></i>
+                                        <span>Ganti Film</span>
+                                    </a>
+                                @else
+                                    <div></div>
+                                @endif
                                 <a href="{{ route('kasir.kasir') }}" class="btn btn-sm {{ $room->is_occupied ? 'btn-outline-secondary' : 'btn-emerald text-white' }} rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1">
                                     <i class="bi bi-cart-plus"></i>
                                     <span>{{ $room->is_occupied ? 'Buat Pesanan Baru' : 'Pilih Room Ini' }}</span>

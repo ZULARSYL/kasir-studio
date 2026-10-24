@@ -37,6 +37,7 @@ class Transaksi extends Model
         'kembalian',
         'status',
         'waktu_transaksi',
+        'waktu_mulai_film',
         'catatan',
     ];
 
@@ -53,7 +54,13 @@ class Transaksi extends Model
         'uang_diterima' => 'decimal:2',
         'kembalian' => 'decimal:2',
         'waktu_transaksi' => 'datetime',
+        'waktu_mulai_film' => 'datetime',
     ];
+
+    public function filmHistories(): HasMany
+    {
+        return $this->hasMany(TransaksiFilmHistory::class, 'transaksi_id');
+    }
 
     public function kasirShift(): BelongsTo
     {

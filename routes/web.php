@@ -209,4 +209,9 @@ Route::middleware(['auth', 'role:admin,kasir'])
         Route::post('/cek-promo', [KasirController::class, 'cekPromo'])->name('cek-promo');
         Route::post('/checkout', [KasirController::class, 'checkout'])->name('checkout');
         Route::get('/struk/{id}', [KasirController::class, 'struk'])->name('struk');
+
+        // Fitur Pergantian Film Room Berjalan
+        Route::get('/ganti-film/{roomId}', [KasirController::class, 'getGantiFilmData'])->name('ganti-film.data');
+        Route::post('/ganti-film/kalkulasi', [KasirController::class, 'kalkulasiGantiFilm'])->name('ganti-film.kalkulasi');
+        Route::post('/ganti-film/simpan', [KasirController::class, 'simpanGantiFilm'])->name('ganti-film.simpan');
     });

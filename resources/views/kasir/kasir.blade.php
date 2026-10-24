@@ -10,6 +10,7 @@
     $cekPromoRoute = $isAdmin && Route::has('admin.kasir.cek-promo') ? route('admin.kasir.cek-promo') : route('kasir.cek-promo');
     $checkoutRoute = $isAdmin && Route::has('admin.kasir.checkout') ? route('admin.kasir.checkout') : route('kasir.checkout');
     $strukBaseUrl = $isAdmin ? url('/admin/kasir/struk') : url('/kasir/struk');
+    $returnDashboardUrl = $isAdmin ? url('/admin/dashboard') : route('kasir.index');
 @endphp
 <div class="container-fluid px-0">
 
@@ -184,8 +185,8 @@
                             <strong class="font-monospace text-emerald">Rp {{ number_format($activeShift->modal_awal, 0, ',', '.') }}</strong>
                         </div>
                         <div class="d-none d-lg-flex flex-column text-end pe-3 border-end">
-                            <span class="text-muted small">Penjualan Shift Ini</span>
-                            <strong class="font-monospace text-dark">Rp {{ number_format($activeShift->total_penjualan, 0, ',', '.') }}</strong>
+                            <span class="text-muted small">GRAND TOTAL PEMBELIAN HARI INI</span>
+                            <strong class="font-monospace text-dark">Rp {{ number_format($totalPendapatanToday, 0, ',', '.') }}</strong>
                         </div>
                         <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 btn-reset-pos" title="Reset Pilihan Form">
                             <i class="bi bi-arrow-counterclockwise me-1"></i> Transaksi Baru
@@ -198,18 +199,51 @@
             </div>
         </div>
 
+        {{-- BANNER KHUSUS MODE GANTI FILM --}}
+        @if($gantiFilmContext)
+            <div class="alert alert-warning border-0 rounded-4 shadow-sm mb-4 p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-warning text-dark rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                        <i class="bi bi-arrow-repeat fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h6 class="fw-bold mb-0 text-dark">Mode Pergantian Film &mdash; Studio {{ $gantiFilmContext['room_nama'] }}</h6>
+                            <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 font-monospace">Penayangan Berjalan</span>
+                        </div>
+                        <div class="small text-muted mt-0.5">
+                            Nota: <strong class="text-dark font-monospace">#{{ $gantiFilmContext['nomor_transaksi'] }}</strong> &bull; 
+                            Pelanggan: <strong class="text-dark">{{ $gantiFilmContext['nama_pelanggan'] }}</strong> &bull; 
+                            Film Saat Ini: <strong class="text-dark">{{ $gantiFilmContext['film_judul_lama'] }}</strong> (Tayang {{ $gantiFilmContext['durasi_aktual_menit'] }} mnt / Biaya Rp {{ number_format($gantiFilmContext['biaya_aktual_terpakai'], 0, ',', '.') }})
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small d-none d-md-inline">Pilih film baru di Step 1 &bull;</span>
+                    <a href="{{ route('kasir.kasir') }}" class="btn btn-outline-danger btn-sm rounded-3 px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5" title="Batalkan pergantian film dan kembali ke POS normal">
+                        <i class="bi bi-x-circle"></i>
+                        <span>Batalkan Mode Ganti Film</span>
+                    </a>
+                </div>
+            </div>
+        @endif
+
         <!-- POS Nav Tabs / Stepper (Responsif & Cepat Beralih) -->
         <div class="card border-0 shadow-sm rounded-4 mb-3 bg-white p-2">
             <div class="nav nav-pills pos-nav-pills gap-2 flex-nowrap overflow-x-auto" id="posStepTabs" role="tablist">
                 <button class="nav-link active rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-film-btn" data-bs-toggle="pill" data-bs-target="#tab-film-pane" type="button" role="tab">
                     <i class="bi bi-film"></i>
-                    <span>Pilih Film Studio</span>
+                    <span>{{ $gantiFilmContext ? 'Pilih Film Pengganti' : 'Pilih Film Studio' }}</span>
                     <span class="badge bg-emerald text-white rounded-circle ms-1 d-none" id="filmStepChecked"><i class="bi bi-check"></i></span>
                 </button>
                 <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-room-btn" data-bs-toggle="pill" data-bs-target="#tab-room-pane" type="button" role="tab">
                     <i class="bi bi-door-open-fill"></i>
                     <span>Pilih Room Studio Tersedia</span>
-                    <span class="badge bg-emerald text-white rounded-circle ms-1 d-none" id="roomStepChecked"><i class="bi bi-check"></i></span>
+                    @if($gantiFilmContext)
+                        <span class="badge bg-warning text-dark rounded-pill ms-1 font-monospace" style="font-size: 0.72rem;"><i class="bi bi-lock-fill me-0.5"></i>Terkunci: {{ $gantiFilmContext['room_nama'] }}</span>
+                    @else
+                        <span class="badge bg-emerald text-white rounded-circle ms-1 d-none" id="roomStepChecked"><i class="bi bi-check"></i></span>
+                    @endif
                 </button>
                 <button class="nav-link rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-nowrap" id="tab-cafe-btn" data-bs-toggle="pill" data-bs-target="#tab-cafe-pane" type="button" role="tab">
                     <i class="bi bi-cup-hot-fill"></i>
@@ -268,7 +302,7 @@
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div>
                                     <h5 class="fw-bold text-dark mb-0">Daftar Film</h5>
-                                    <small class="text-muted">Klik salah satu film untuk memilih dan menambahkan ke keranjang pesanan.</small>
+                                    <small class="text-muted">Pilih film yang memiliki slot tersedia. Film yang sedang diputar di room ini tidak dapat dipilih sebagai pengganti.</small>
                                 </div>
                                 <span class="badge bg-light text-muted border font-monospace" id="movieCounterBadge">{{ $films->count() }} Film</span>
                             </div>
@@ -283,9 +317,10 @@
                                         $activeCount = (int) ($film->active_rooms_count ?? 0);
                                         $sisaSlot = max(0, $limit - $activeCount);
                                         $isSlotFull = (bool) ($film->is_slot_full ?? ($activeCount >= $limit));
+                                        $isCurrentPlaying = $gantiFilmContext && ($film->id == $gantiFilmContext['film_id_lama']);
                                     @endphp
                                     <div class="col movie-card-wrapper" data-genre="{{ $genreNames }}" data-title="{{ strtolower($film->judul) }}" data-sku="{{ strtolower($sku) }}">
-                                        <div class="pos-product-card card h-100 {{ $isSlotFull ? 'film-slot-full' : 'bg-white cursor-pointer' }} rounded-4 p-3 transition-all movie-card position-relative" 
+                                        <div class="pos-product-card card h-100 {{ $isCurrentPlaying ? 'film-current-playing' : ($isSlotFull ? 'film-slot-full' : 'bg-white cursor-pointer') }} rounded-4 p-3 transition-all movie-card position-relative" 
                                              data-id="{{ $film->id }}"
                                              data-judul="{{ $film->judul }}"
                                              data-durasi="{{ $film->durasi_menit }}"
@@ -293,6 +328,7 @@
                                              data-poster="{{ $film->poster_url }}"
                                              data-sku="{{ $sku }}"
                                              data-slot-full="{{ $isSlotFull ? '1' : '0' }}"
+                                             data-current-playing="{{ $isCurrentPlaying ? '1' : '0' }}"
                                              data-limit="{{ $limit }}"
                                              data-active="{{ $activeCount }}"
                                              data-sisa="{{ $sisaSlot }}">
@@ -306,8 +342,12 @@
                                                     <i class="bi bi-check-lg"></i>
                                                 </div>
 
-                                                <!-- Slot Stok Badge di Atas Cover -->
-                                                @if($isSlotFull)
+                                                <!-- Slot Stok / Status Playing Badge di Atas Cover -->
+                                                @if($isCurrentPlaying)
+                                                    <span class="badge bg-secondary text-white position-absolute top-0 start-0 m-2 shadow-sm font-monospace py-1 px-1.5" style="font-size: 0.65rem; z-index: 2;">
+                                                        <i class="bi bi-play-circle-fill me-1"></i>Sedang Ditonton
+                                                    </span>
+                                                @elseif($isSlotFull)
                                                     <span class="badge bg-danger text-white position-absolute top-0 start-0 m-2 shadow-sm font-monospace py-1 px-1.5" style="font-size: 0.65rem; z-index: 2;">
                                                         <i class="bi bi-lock-fill me-1"></i>Slot Penuh ({{ $limit }}/{{ $limit }})
                                                     </span>
@@ -349,6 +389,10 @@
                                                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle w-100 py-1" style="font-size: 0.72rem;">
                                                         <i class="bi bi-hourglass-split me-1"></i>(Tunggu Selesai)
                                                     </span>
+                                                </div>
+                                            @elseif($isCurrentPlaying)
+                                                <div class="mt-2 pt-1 border-top text-center text-muted" style="font-size: 0.72rem;">
+                                                    <span><i class="bi bi-info-circle me-1"></i>Film sedang diputar di room ini</span>
                                                 </div>
                                             @else
                                                 <div class="mt-2 pt-1 border-top d-flex justify-content-between align-items-center text-muted" style="font-size: 0.72rem;">
@@ -423,9 +467,19 @@
 
                                             <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
                                                 <span class="small text-muted">Status:</span>
-                                                <strong class="{{ $isOccupied ? 'text-danger' : 'text-emerald' }} small">
-                                                    {{ $isOccupied ? 'Sedang Digunakan' : 'Siap Digunakan' }}
-                                                </strong>
+                                                <div class="d-flex align-items-center gap-1.5">
+                                                    <strong class="{{ $isOccupied ? 'text-danger' : 'text-emerald' }} small">
+                                                        {{ $isOccupied ? 'Sedang Digunakan' : 'Siap Digunakan' }}
+                                                    </strong>
+                                                    @if($isOccupied)
+                                                        <a href="{{ route('kasir.kasir', ['mode' => 'ganti_film', 'room_id' => $room->id]) }}" 
+                                                           class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-2.5 py-0.5 shadow-sm"
+                                                           style="font-size: 0.72rem; z-index: 5;"
+                                                           title="Ganti Film yang sedang ditayangkan">
+                                                            <i class="bi bi-arrow-repeat"></i> Ganti Film
+                                                        </a>
+                                                    @endif
+                                                </div>
                                             </div>
 
                                             <!-- Selection Checkmark -->
@@ -533,7 +587,145 @@
             <!-- KOLOM KANAN: CURRENT CART & CHECKOUT (MIRIP PERSIS SIDEBAR/KASIR.PNG)-->
             <!-- =================================================================== -->
             <div class="col-12 col-lg-5 col-xl-4" id="checkoutPanelContainer">
-                <div class="card border-0 shadow-sm rounded-4 sticky-top pos-cart-panel bg-white p-4" style="top: 85px;">
+                @if($gantiFilmContext)
+                    <!-- PANEL KERANJANG KHUSUS MODE GANTI FILM -->
+                    <div class="card border-0 shadow-sm rounded-4 sticky-top pos-cart-panel bg-white p-4" style="top: 85px;">
+                        <!-- Header Mode Ganti Film -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-warning text-dark fw-bold mb-1"><i class="bi bi-arrow-repeat me-1"></i>MODE GANTI FILM</span>
+                                <h5 class="fw-bold text-heading mb-0">{{ $gantiFilmContext['room_nama'] }}</h5>
+                            </div>
+                            <a href="{{ route('kasir.kasir') }}" class="btn btn-sm btn-outline-danger rounded-3" title="Batalkan Mode Ganti Film">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                        </div>
+
+                        <!-- Info Transaksi Terkait -->
+                        <div class="card bg-light border-0 rounded-3 p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                                <span>No. Transaksi</span>
+                                <strong class="font-monospace text-dark">#{{ $gantiFilmContext['nomor_transaksi'] }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                                <span>Pelanggan</span>
+                                <strong class="text-dark">{{ $gantiFilmContext['nama_pelanggan'] }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small text-muted">
+                                <span>Room Studio</span>
+                                <span class="badge bg-emerald-subtle text-emerald border border-emerald font-monospace">{{ $gantiFilmContext['room_nama'] }} (Kapasitas {{ $gantiFilmContext['room_kapasitas'] }} Org)</span>
+                            </div>
+                        </div>
+
+                        <!-- Section: Film Sebelumnya (Lama) -->
+                        <div class="card border rounded-3 p-3 mb-3 bg-white">
+                            <div class="d-flex align-items-center justify-content-between mb-1.5">
+                                <span class="badge bg-secondary text-white font-monospace" style="font-size: 0.65rem;">FILM LAMA (TERPAKAI)</span>
+                                <span class="small text-muted font-monospace">{{ $gantiFilmContext['waktu_mulai_time'] }} WIB &bull; {{ $gantiFilmContext['durasi_aktual_menit'] }} mnt</span>
+                            </div>
+                            <div class="fw-bold text-dark fs-6 text-truncate mb-1" title="{{ $gantiFilmContext['film_judul_lama'] }}">
+                                {{ $gantiFilmContext['film_judul_lama'] }}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top small">
+                                <span class="text-muted">Biaya Terpakai ({{ $gantiFilmContext['durasi_aktual_menit'] }} mnt)</span>
+                                <span class="fw-bold font-monospace text-dark">Rp {{ number_format($gantiFilmContext['biaya_aktual_terpakai'], 0, ',', '.') }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Section: Film Pengganti (Baru) -->
+                        <div class="card border rounded-3 p-3 mb-3 bg-white" id="boxFilmPengganti">
+                            <div class="d-flex align-items-center justify-content-between mb-1.5">
+                                <span class="badge bg-emerald text-white font-monospace" style="font-size: 0.65rem;">FILM PENGGANTI (BARU)</span>
+                                <button type="button" class="btn btn-sm text-danger p-0" id="btnBatalPilihFilmPengganti" title="Hapus Pilihan" style="display: none;">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Prompt belum memilih -->
+                            <div id="unselectedFilmBaruPrompt" class="text-center py-3">
+                                <div class="text-muted opacity-50 mb-1"><i class="bi bi-film fs-2"></i></div>
+                                <div class="small fw-semibold text-dark">Belum Memilih Film Pengganti</div>
+                                <p class="text-muted small mb-0" style="font-size: 0.76rem;">Klik salah satu film pada katalog Step 1</p>
+                            </div>
+
+                            <!-- Detail film terpilih -->
+                            <div id="selectedFilmBaruContent" style="display: none;">
+                                <div class="fw-bold text-dark fs-6 text-truncate mb-0.5" id="gantiFilmBaruJudul">-</div>
+                                <div class="small text-muted font-monospace mb-2" id="gantiFilmBaruDurasi">-</div>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top small">
+                                    <span class="text-muted">Harga Film Pengganti</span>
+                                    <span class="fw-bold font-monospace text-emerald fs-6" id="gantiFilmBaruHarga">Rp 0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section: Rincian Kalkulasi & Selisih Biaya (Rule 3) -->
+                        <div class="border rounded-3 p-3 mb-3 bg-light-subtle">
+                            <div class="d-flex justify-content-between align-items-center small mb-1.5">
+                                <span class="text-muted">Biaya Aktual Film Lama</span>
+                                <span class="font-monospace text-dark" id="lblKalkulasiBiayaLama">Rp {{ number_format($gantiFilmContext['biaya_aktual_terpakai'], 0, ',', '.') }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small mb-1.5">
+                                <span class="text-muted">Harga Film Pengganti</span>
+                                <span class="font-monospace text-dark" id="lblKalkulasiHargaBaru">Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small mb-2 pb-2 border-bottom">
+                                <span class="fw-semibold text-dark">Total Biaya Film Baru</span>
+                                <span class="font-monospace fw-bold text-dark" id="lblKalkulasiTotalFinal">Rp {{ number_format($gantiFilmContext['biaya_aktual_terpakai'], 0, ',', '.') }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small mb-2">
+                                <span class="text-muted">Pembayaran Awal Film</span>
+                                <span class="font-monospace text-danger">- Rp {{ number_format($gantiFilmContext['harga_film_awal'], 0, ',', '.') }}</span>
+                            </div>
+
+                            <!-- BANNER STATUS SELISIH (Tambahan / Refund / Pas) -->
+                            <div id="bannerSelisihGantiFilm" class="mt-2.5 p-2.5 rounded-3 text-center border" style="background-color: #f8fafc;">
+                                <span class="small text-muted d-block">Pilih film pengganti untuk melihat selisih biaya</span>
+                            </div>
+                        </div>
+
+                        <!-- Section: Pembayaran Tambahan (Jika selisih > 0) -->
+                        <div id="sectionPembayaranTambahan" style="display: none;" class="mb-3">
+                            <div class="mb-2">
+                                <label class="form-label text-uppercase text-muted fw-bold small mb-1 pos-section-label">
+                                    Metode Bayar Tambahan<span class="text-danger">*</span>
+                                </label>
+                                <select id="selectGantiFilmMetodeBayar" class="form-select form-select-sm rounded-3 fw-semibold text-dark">
+                                    @foreach($tipePembayarans as $tp)
+                                        <option value="{{ $tp->id }}" data-metode="{{ strtolower($tp->metode_pembayaran) }}">
+                                            {{ $tp->metode_pembayaran }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-7">
+                                    <label class="text-uppercase text-muted fw-bold mb-1 pos-micro-label">Uang Diterima</label>
+                                    <input type="text" inputmode="numeric" id="inputGantiFilmUangDiterima" class="form-control form-control-sm font-monospace fw-bold text-end" placeholder="0">
+                                </div>
+                                <div class="col-5">
+                                    <label class="text-uppercase text-muted fw-bold mb-1 pos-micro-label">Kembalian</label>
+                                    <div class="pos-change-box rounded-3 p-1.5 text-center bg-emerald-subtle border border-emerald" style="min-height: 31px;">
+                                        <span class="fw-bold text-emerald font-monospace small" id="labelGantiFilmKembalian">Rp 0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section: Alasan Pergantian (Opsional) -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-muted mb-1">Alasan Pergantian Film (Opsional)</label>
+                            <input type="text" id="inputGantiFilmAlasan" class="form-control form-control-sm rounded-3" placeholder="Contoh: Tamu ingin ganti judul film">
+                        </div>
+
+                        <!-- Tombol Konfirmasi Pergantian Film -->
+                        <button type="button" class="btn btn-warning text-dark w-100 py-3 rounded-3 shadow-sm fw-bold fs-6 d-flex align-items-center justify-content-center gap-2" id="btnProsesGantiFilm" disabled>
+                            <i class="bi bi-arrow-repeat fs-5"></i>
+                            <span>Konfirmasi Pergantian Film</span>
+                        </button>
+                    </div>
+                @else
+                    <div class="card border-0 shadow-sm rounded-4 sticky-top pos-cart-panel bg-white p-4" style="top: 85px;">
 
                     <!-- Input Nama Pelanggan -->
                     <div class="mb-3">
@@ -704,6 +896,7 @@
                     </button>
 
                 </div>
+                @endif
             </div>
 
         </div>
@@ -791,6 +984,98 @@
                         <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal">Periksa Kembali</button>
                         <button type="button" class="btn btn-emerald rounded-3 px-4 fw-bold" id="btnKonfirmasiPembayaran">
                             <i class="bi bi-printer-fill me-1"></i>Konfirmasi Bayar & Cetak
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- MODAL KONFIRMASI PERGANTIAN FILM (RULE 5)                                  -->
+        <!-- ========================================================================= -->
+        <div class="modal fade" id="modalDialogGantiFilm" tabindex="-1" aria-labelledby="modalDialogGantiFilmLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-bottom">
+                        <h5 class="modal-title fw-bold text-dark" id="modalDialogGantiFilmLabel">
+                            <i class="bi bi-arrow-repeat text-warning me-2"></i>Konfirmasi Pergantian Film
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="alert alert-light border rounded-3 p-3 mb-3">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Room Studio:</span>
+                                <strong class="text-dark" id="modalGantiRoomNama">-</strong>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>No. Transaksi:</span>
+                                <strong class="text-dark font-monospace" id="modalGantiNoTransaksi">-</strong>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>Pelanggan:</span>
+                                <strong class="text-dark" id="modalGantiNamaPelanggan">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Keterangan</th>
+                                        <th class="text-end">Rincian / Biaya</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <strong class="d-block text-dark">Film Lama:</strong>
+                                            <span id="modalGantiFilmLamaJudul">-</span>
+                                            <div class="small text-muted font-monospace" id="modalGantiFilmLamaDurasi">-</div>
+                                        </td>
+                                        <td class="text-end font-monospace" id="modalGantiBiayaLama">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <strong class="d-block text-dark">Film Baru:</strong>
+                                            <span id="modalGantiFilmBaruJudul">-</span>
+                                            <div class="small text-muted font-monospace" id="modalGantiFilmBaruDurasi">-</div>
+                                        </td>
+                                        <td class="text-end font-monospace text-emerald fw-bold" id="modalGantiHargaBaru">-</td>
+                                    </tr>
+                                    <tr class="table-light">
+                                        <td class="fw-semibold">Total Biaya Film Akhir</td>
+                                        <td class="text-end font-monospace fw-bold" id="modalGantiTotalBiayaFinal">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Pembayaran Awal Film</td>
+                                        <td class="text-end font-monospace text-muted" id="modalGantiBayarAwal">-</td>
+                                    </tr>
+                                    <tr id="modalGantiRowSelisih">
+                                        <td class="fw-bold" id="modalGantiLabelSelisih">Selisih Biaya</td>
+                                        <td class="text-end font-monospace fw-bold fs-6" id="modalGantiNilaiSelisih">-</td>
+                                    </tr>
+                                    <tr id="modalGantiRowBayarTambahan" style="display: none;">
+                                        <td>Pembayaran Tambahan Diterima</td>
+                                        <td class="text-end font-monospace" id="modalGantiUangDiterima">-</td>
+                                    </tr>
+                                    <tr id="modalGantiRowKembalian" style="display: none;">
+                                        <td>Kembalian Pelanggan</td>
+                                        <td class="text-end font-monospace text-emerald fw-bold" id="modalGantiKembalian">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="p-2.5 rounded-3 bg-light border small text-muted">
+                            <i class="bi bi-info-circle text-primary me-1"></i>
+                            Pergantian film akan menutup riwayat film sebelumnya dan mencatat pemutaran film baru pada transaksi yang sama secara otomatis.
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top bg-light-subtle rounded-bottom-4">
+                        <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-warning text-dark fw-bold rounded-3 px-4 shadow-sm" id="btnSubmitGantiFilm">
+                            <i class="bi bi-check2-circle me-1"></i> Ya, Simpan Pergantian
                         </button>
                     </div>
                 </div>
@@ -997,6 +1282,19 @@
     .movie-card.film-slot-full .pos-thumb-img {
         filter: grayscale(45%);
     }
+    .movie-card.film-current-playing {
+        opacity: 0.72;
+        background-color: #f1f5f9 !important;
+        border: 1.5px dashed #94a3b8 !important;
+        cursor: not-allowed !important;
+    }
+    .movie-card.film-current-playing:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    .movie-card.film-current-playing .pos-thumb-img {
+        filter: grayscale(60%);
+    }
     .pos-thumb-box {
         aspect-ratio: 1 / 1;
         width: 100%;
@@ -1134,6 +1432,20 @@ document.addEventListener('DOMContentLoaded', function () {
         uangDiterima: 0
     };
 
+    window.gantiFilmContext = @json($gantiFilmContext);
+
+    const gantiFilmState = window.gantiFilmContext ? {
+        transaksiId: window.gantiFilmContext.transaksi_id,
+        filmLamaId: window.gantiFilmContext.film_id_lama,
+        biayaAktualLama: Number(window.gantiFilmContext.biaya_aktual_terpakai || 0),
+        hargaFilmAwal: Number(window.gantiFilmContext.harga_film_awal || 0),
+        filmBaru: null,
+        selisih: 0,
+        tipeSelisih: 'pas',
+        uangDiterima: 0,
+        tipeBayarId: null
+    } : null;
+
     function formatRupiah(num, withPrefix = true) {
         const formatted = Number(num || 0).toLocaleString('id-ID');
         return withPrefix ? 'Rp ' + formatted : formatted;
@@ -1263,6 +1575,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // PILIH KARTU FILM
     document.querySelectorAll('.movie-card').forEach(card => {
         card.addEventListener('click', function () {
+            // Cek jika film sedang diputar di room ini (ganti film mode)
+            if (this.getAttribute('data-current-playing') === '1') {
+                alert('Film ini sedang diputar pada room saat ini. Silakan pilih judul film pengganti lainnya.');
+                return;
+            }
+
             // Cek apakah batas limit penggunaan film sedang penuh
             if (this.getAttribute('data-slot-full') === '1') {
                 const judul = this.getAttribute('data-judul') || 'Film ini';
@@ -1273,6 +1591,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
             document.querySelectorAll('.movie-card').forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
+
+            // JIKA DALAM MODE GANTI FILM
+            if (gantiFilmState) {
+                pilihFilmPengganti({
+                    id: this.getAttribute('data-id'),
+                    judul: this.getAttribute('data-judul'),
+                    durasi: this.getAttribute('data-durasi'),
+                    harga: Number(this.getAttribute('data-harga') || 0),
+                    poster: this.getAttribute('data-poster'),
+                    sku: this.getAttribute('data-sku')
+                });
+                return;
+            }
 
             orderState.film = {
                 id: this.getAttribute('data-id'),
@@ -1942,6 +2273,306 @@ document.addEventListener('DOMContentLoaded', function () {
                 btnKonfirmasiPembayaran.disabled = false;
                 btnKonfirmasiPembayaran.innerHTML = `<i class="bi bi-printer-fill me-1"></i>Konfirmasi Bayar & Cetak`;
                 alert('Gagal memproses checkout pembayaran. Silakan periksa koneksi atau coba lagi.');
+            });
+        });
+    }
+
+    // -------------------------------------------------------------
+    // LOGIKA KHUSUS MODE GANTI FILM (RULE 1, 2, 3, 4, 5, 6)
+    // -------------------------------------------------------------
+    function pilihFilmPengganti(film) {
+        if (!gantiFilmState) return;
+        gantiFilmState.filmBaru = film;
+
+        const boxPrompt = document.getElementById('unselectedFilmBaruPrompt');
+        const boxContent = document.getElementById('selectedFilmBaruContent');
+        const btnBatal = document.getElementById('btnBatalPilihFilmPengganti');
+
+        if (boxPrompt) boxPrompt.style.display = 'none';
+        if (boxContent) boxContent.style.display = 'block';
+        if (btnBatal) btnBatal.style.display = 'inline-block';
+
+        const elJudul = document.getElementById('gantiFilmBaruJudul');
+        if (elJudul) elJudul.textContent = film.judul;
+
+        const elDurasi = document.getElementById('gantiFilmBaruDurasi');
+        if (elDurasi) elDurasi.textContent = `${film.sku} • ${film.durasi} Menit`;
+
+        const elHarga = document.getElementById('gantiFilmBaruHarga');
+        if (elHarga) elHarga.textContent = formatRupiah(film.harga);
+
+        // Rule 3: Kalkulasi Biaya dan Selisih Harga
+        const biayaLamaTerpakai = gantiFilmState.biayaAktualLama;
+        const hargaBaru = film.harga;
+        const totalFinal = biayaLamaTerpakai + hargaBaru;
+        const bayarAwal = gantiFilmState.hargaFilmAwal;
+        const selisih = totalFinal - bayarAwal;
+
+        gantiFilmState.selisih = selisih;
+        gantiFilmState.tipeSelisih = selisih > 0 ? 'tambahan' : (selisih < 0 ? 'refund' : 'pas');
+
+        const lblHargaBaru = document.getElementById('lblKalkulasiHargaBaru');
+        if (lblHargaBaru) lblHargaBaru.textContent = formatRupiah(hargaBaru);
+
+        const lblTotalFinal = document.getElementById('lblKalkulasiTotalFinal');
+        if (lblTotalFinal) lblTotalFinal.textContent = formatRupiah(totalFinal);
+
+        const bannerSelisih = document.getElementById('bannerSelisihGantiFilm');
+        const secBayarTambahan = document.getElementById('sectionPembayaranTambahan');
+        const inputUangDiterimaGanti = document.getElementById('inputGantiFilmUangDiterima');
+        const btnProses = document.getElementById('btnProsesGantiFilm');
+
+        if (bannerSelisih) {
+            if (selisih > 0) {
+                bannerSelisih.className = 'mt-2.5 p-2.5 rounded-3 text-center border border-warning-subtle bg-warning-subtle';
+                bannerSelisih.style.backgroundColor = '';
+                bannerSelisih.innerHTML = `
+                    <div class="small fw-bold text-dark mb-0.5"><i class="bi bi-plus-circle-fill text-warning me-1"></i>Tambahan Pembayaran:</div>
+                    <div class="fs-5 fw-bold text-danger font-monospace">+ ${formatRupiah(selisih)}</div>
+                    <span class="small text-muted font-sm d-block mt-0.5">Pelanggan perlu membayar biaya tambahan</span>
+                `;
+            } else if (selisih < 0) {
+                bannerSelisih.className = 'mt-2.5 p-2.5 rounded-3 text-center border border-primary-subtle bg-primary-subtle';
+                bannerSelisih.style.backgroundColor = '';
+                bannerSelisih.innerHTML = `
+                    <div class="small fw-bold text-dark mb-0.5"><i class="bi bi-arrow-down-circle-fill text-primary me-1"></i>Pengembalian Dana (Refund):</div>
+                    <div class="fs-5 fw-bold text-primary font-monospace">- ${formatRupiah(Math.abs(selisih))}</div>
+                    <span class="small text-muted font-sm d-block mt-0.5">Kembalikan selisih pembayaran ke pelanggan</span>
+                `;
+            } else {
+                bannerSelisih.className = 'mt-2.5 p-2.5 rounded-3 text-center border border-success-subtle bg-success-subtle';
+                bannerSelisih.style.backgroundColor = '';
+                bannerSelisih.innerHTML = `
+                    <div class="small fw-bold text-success mb-0.5"><i class="bi bi-check-circle-fill text-success me-1"></i>Biaya Pas (Tidak Ada Selisih)</div>
+                    <div class="fs-5 fw-bold text-success font-monospace">Rp 0</div>
+                    <span class="small text-muted font-sm d-block mt-0.5">Tidak ada tambahan biaya atau pengembalian dana</span>
+                `;
+            }
+        }
+
+        if (secBayarTambahan) {
+            if (selisih > 0) {
+                secBayarTambahan.style.display = 'block';
+                if (inputUangDiterimaGanti) {
+                    inputUangDiterimaGanti.value = formatRupiah(selisih, false);
+                    updateGantiFilmKembalian(selisih);
+                }
+            } else {
+                secBayarTambahan.style.display = 'none';
+            }
+        }
+
+        if (btnProses) {
+            btnProses.disabled = false;
+        }
+    }
+
+    function batalPilihFilmPengganti() {
+        if (!gantiFilmState) return;
+        gantiFilmState.filmBaru = null;
+        gantiFilmState.selisih = 0;
+        gantiFilmState.tipeSelisih = 'pas';
+
+        document.querySelectorAll('.movie-card').forEach(c => c.classList.remove('selected'));
+
+        const boxPrompt = document.getElementById('unselectedFilmBaruPrompt');
+        const boxContent = document.getElementById('selectedFilmBaruContent');
+        const btnBatal = document.getElementById('btnBatalPilihFilmPengganti');
+        const secBayarTambahan = document.getElementById('sectionPembayaranTambahan');
+        const btnProses = document.getElementById('btnProsesGantiFilm');
+        const bannerSelisih = document.getElementById('bannerSelisihGantiFilm');
+
+        if (boxPrompt) boxPrompt.style.display = 'block';
+        if (boxContent) boxContent.style.display = 'none';
+        if (btnBatal) btnBatal.style.display = 'none';
+        if (secBayarTambahan) secBayarTambahan.style.display = 'none';
+        if (btnProses) btnProses.disabled = true;
+
+        const lblHargaBaru = document.getElementById('lblKalkulasiHargaBaru');
+        if (lblHargaBaru) lblHargaBaru.textContent = 'Rp 0';
+
+        const lblTotalFinal = document.getElementById('lblKalkulasiTotalFinal');
+        if (lblTotalFinal) lblTotalFinal.textContent = formatRupiah(gantiFilmState.biayaAktualLama);
+
+        if (bannerSelisih) {
+            bannerSelisih.className = 'mt-2.5 p-2.5 rounded-3 text-center border';
+            bannerSelisih.style.backgroundColor = '#f8fafc';
+            bannerSelisih.innerHTML = '<span class="small text-muted d-block">Pilih film pengganti untuk melihat selisih biaya</span>';
+        }
+    }
+
+    const btnBatalGanti = document.getElementById('btnBatalPilihFilmPengganti');
+    if (btnBatalGanti) {
+        btnBatalGanti.addEventListener('click', batalPilihFilmPengganti);
+    }
+
+    function updateGantiFilmKembalian(selisihTotal) {
+        const inputUang = document.getElementById('inputGantiFilmUangDiterima');
+        const labelKembalian = document.getElementById('labelGantiFilmKembalian');
+        if (!inputUang || !labelKembalian) return;
+
+        const diterima = parseRupiah(inputUang.value);
+        const tagihan = typeof selisihTotal !== 'undefined' ? selisihTotal : (gantiFilmState ? gantiFilmState.selisih : 0);
+        const sisa = diterima - tagihan;
+
+        if (sisa >= 0) {
+            labelKembalian.className = 'fw-bold text-emerald font-monospace small';
+            labelKembalian.textContent = formatRupiah(sisa);
+        } else {
+            labelKembalian.className = 'fw-bold text-danger font-monospace small';
+            labelKembalian.textContent = '- ' + formatRupiah(Math.abs(sisa));
+        }
+    }
+
+    const inputUangGanti = document.getElementById('inputGantiFilmUangDiterima');
+    if (inputUangGanti) {
+        inputUangGanti.addEventListener('input', function () {
+            const cursorPosition = this.selectionStart;
+            const digitsBeforeCursor = this.value.slice(0, cursorPosition).replace(/\D/g, '').length;
+            const digits = this.value.replace(/\D/g, '');
+            this.value = digits ? formatRupiah(digits, false) : '';
+
+            let nextCursorPosition = 0;
+            let digitsAtCursor = 0;
+            while (nextCursorPosition < this.value.length && digitsAtCursor < digitsBeforeCursor) {
+                if (/\d/.test(this.value[nextCursorPosition])) digitsAtCursor++;
+                nextCursorPosition++;
+            }
+            this.setSelectionRange(nextCursorPosition, nextCursorPosition);
+            updateGantiFilmKembalian();
+        });
+    }
+
+    // Modal Konfirmasi Pergantian Film (Rule 5)
+    const btnProsesGantiFilm = document.getElementById('btnProsesGantiFilm');
+    const modalGantiEl = document.getElementById('modalDialogGantiFilm');
+    const modalGantiInstance = modalGantiEl && typeof bootstrap !== 'undefined'
+        ? bootstrap.Modal.getOrCreateInstance(modalGantiEl)
+        : null;
+
+    if (btnProsesGantiFilm) {
+        btnProsesGantiFilm.addEventListener('click', function () {
+            if (!gantiFilmState || !gantiFilmState.filmBaru) {
+                alert('Silakan pilih film pengganti terlebih dahulu pada katalog Step 1.');
+                return;
+            }
+
+            const ctx = window.gantiFilmContext;
+            const filmBaru = gantiFilmState.filmBaru;
+            const selisih = gantiFilmState.selisih;
+
+            const selectMetode = document.getElementById('selectGantiFilmMetodeBayar');
+            const selectedOpt = selectMetode ? selectMetode.options[selectMetode.selectedIndex] : null;
+            const metodeText = selectedOpt ? selectedOpt.getAttribute('data-metode') || '' : '';
+            const isCash = metodeText.includes('tunai') || metodeText.includes('cash');
+
+            const inputUang = document.getElementById('inputGantiFilmUangDiterima');
+            const uangDiterima = inputUang ? parseRupiah(inputUang.value) : 0;
+
+            if (selisih > 0 && isCash && uangDiterima < selisih) {
+                alert(`Uang tunai tambahan yang diterima kurang! Total tambahan yang harus dibayar adalah ${formatRupiah(selisih)}.`);
+                if (inputUang) inputUang.focus();
+                return;
+            }
+
+            // Isi rincian ke modal
+            document.getElementById('modalGantiRoomNama').textContent = ctx.room_nama;
+            document.getElementById('modalGantiNoTransaksi').textContent = '#' + ctx.nomor_transaksi;
+            document.getElementById('modalGantiNamaPelanggan').textContent = ctx.nama_pelanggan;
+
+            document.getElementById('modalGantiFilmLamaJudul').textContent = ctx.film_judul_lama;
+            document.getElementById('modalGantiFilmLamaDurasi').textContent = `Sudah tayang ${ctx.durasi_aktual_menit} menit • Tarif ${formatRupiah(ctx.tarif_per_menit)}/mnt`;
+            document.getElementById('modalGantiBiayaLama').textContent = formatRupiah(ctx.biaya_aktual_terpakai);
+
+            document.getElementById('modalGantiFilmBaruJudul').textContent = filmBaru.judul;
+            document.getElementById('modalGantiFilmBaruDurasi').textContent = `${filmBaru.durasi} menit`;
+            document.getElementById('modalGantiHargaBaru').textContent = formatRupiah(filmBaru.harga);
+
+            document.getElementById('modalGantiTotalBiayaFinal').textContent = formatRupiah(ctx.biaya_aktual_terpakai + filmBaru.harga);
+            document.getElementById('modalGantiBayarAwal').textContent = '- ' + formatRupiah(ctx.harga_film_awal);
+
+            const rowBayarTambahan = document.getElementById('modalGantiRowBayarTambahan');
+            const rowKembalian = document.getElementById('modalGantiRowKembalian');
+            const lblSelisih = document.getElementById('modalGantiLabelSelisih');
+            const valSelisih = document.getElementById('modalGantiNilaiSelisih');
+
+            if (selisih > 0) {
+                lblSelisih.textContent = 'Tambahan Pembayaran';
+                valSelisih.className = 'text-end font-monospace fw-bold fs-6 text-danger';
+                valSelisih.textContent = '+ ' + formatRupiah(selisih);
+
+                if (rowBayarTambahan) {
+                    rowBayarTambahan.style.display = '';
+                    document.getElementById('modalGantiUangDiterima').textContent = formatRupiah(isCash ? uangDiterima : selisih) + ` (${selectedOpt?.textContent?.trim() || 'TUNAI'})`;
+                }
+                if (rowKembalian) {
+                    rowKembalian.style.display = isCash ? '' : 'none';
+                    document.getElementById('modalGantiKembalian').textContent = formatRupiah(Math.max(0, uangDiterima - selisih));
+                }
+            } else if (selisih < 0) {
+                lblSelisih.textContent = 'Pengembalian Dana (Refund)';
+                valSelisih.className = 'text-end font-monospace fw-bold fs-6 text-primary';
+                valSelisih.textContent = '- ' + formatRupiah(Math.abs(selisih));
+                if (rowBayarTambahan) rowBayarTambahan.style.display = 'none';
+                if (rowKembalian) rowKembalian.style.display = 'none';
+            } else {
+                lblSelisih.textContent = 'Selisih Biaya';
+                valSelisih.className = 'text-end font-monospace fw-bold fs-6 text-success';
+                valSelisih.textContent = 'Rp 0 (Pas)';
+                if (rowBayarTambahan) rowBayarTambahan.style.display = 'none';
+                if (rowKembalian) rowKembalian.style.display = 'none';
+            }
+
+            if (modalGantiInstance) {
+                modalGantiInstance.show();
+            }
+        });
+    }
+
+    const btnSubmitGantiFilm = document.getElementById('btnSubmitGantiFilm');
+    if (btnSubmitGantiFilm) {
+        btnSubmitGantiFilm.addEventListener('click', function () {
+            if (!gantiFilmState || !gantiFilmState.filmBaru) return;
+
+            btnSubmitGantiFilm.disabled = true;
+            btnSubmitGantiFilm.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Menyimpan Pergantian...';
+
+            const selectMetode = document.getElementById('selectGantiFilmMetodeBayar');
+            const inputUang = document.getElementById('inputGantiFilmUangDiterima');
+            const alasan = document.getElementById('inputGantiFilmAlasan')?.value || 'Pergantian film via POS';
+
+            const payload = {
+                transaksi_id: gantiFilmState.transaksiId,
+                film_baru_id: gantiFilmState.filmBaru.id,
+                alasan_ganti: alasan,
+                tipe_pembayaran_tambahan_id: gantiFilmState.selisih > 0 && selectMetode ? selectMetode.value : null,
+                uang_diterima: gantiFilmState.selisih > 0 && inputUang ? parseRupiah(inputUang.value) : 0
+            };
+
+            fetch('{{ route('kasir.ganti-film.simpan') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (modalGantiInstance) modalGantiInstance.hide();
+                    alert(data.message);
+                    window.location.href = '{{ $returnDashboardUrl }}';
+                } else {
+                    btnSubmitGantiFilm.disabled = false;
+                    btnSubmitGantiFilm.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Ya, Simpan Pergantian';
+                    alert(data.message || 'Terjadi kesalahan saat memproses pergantian film.');
+                }
+            })
+            .catch(() => {
+                btnSubmitGantiFilm.disabled = false;
+                btnSubmitGantiFilm.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Ya, Simpan Pergantian';
+                alert('Gagal memproses pergantian film. Silakan periksa koneksi atau coba lagi.');
             });
         });
     }
