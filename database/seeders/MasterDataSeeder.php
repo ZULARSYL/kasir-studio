@@ -191,5 +191,34 @@ class MasterDataSeeder extends Seeder
                 ['menu_cafe_id' => $item['menu_cafe_id']]
             );
         }
+
+        // 12. Master Data Shift Operasional Kasir (Shift 1 & Shift 2)
+        $shifts = [
+            [
+                'nama_shift' => 'Shift 1',
+                'jam_mulai' => '11:00',
+                'jam_selesai' => '16:00',
+                'aturan_modal_awal' => 'manual',
+                'urutan' => 1,
+                'status' => 'aktif',
+                'keterangan' => 'Jadwal operasional pukul 11.00–16.00 WIB. Modal awal dimasukkan manual oleh kasir.',
+            ],
+            [
+                'nama_shift' => 'Shift 2',
+                'jam_mulai' => '16:00',
+                'jam_selesai' => '00:00',
+                'aturan_modal_awal' => 'otomatis_sebelumnya',
+                'urutan' => 2,
+                'status' => 'aktif',
+                'keterangan' => 'Jadwal operasional pukul 16.00–00.00 WIB. Modal awal otomatis mengambil saldo akhir Shift 1.',
+            ],
+        ];
+
+        foreach ($shifts as $s) {
+            \App\Models\Shift::updateOrCreate(
+                ['nama_shift' => $s['nama_shift']],
+                $s
+            );
+        }
     }
 }

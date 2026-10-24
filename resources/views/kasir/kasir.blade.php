@@ -11,6 +11,7 @@
     $checkoutRoute = $isAdmin && Route::has('admin.kasir.checkout') ? route('admin.kasir.checkout') : route('kasir.checkout');
     $strukBaseUrl = $isAdmin ? url('/admin/kasir/struk') : url('/kasir/struk');
     $returnDashboardUrl = $isAdmin ? url('/admin/dashboard') : route('kasir.index');
+    $shiftInfoRoute = $isAdmin && Route::has('admin.kasir.shift.info') ? route('admin.kasir.shift.info') : route('kasir.shift.info');
 @endphp
 <div class="container-fluid px-0">
 
@@ -60,11 +61,27 @@
                                 </div>
                                 <div class="small">
                                     <strong class="d-block text-dark">Mode Kasir Darurat (Administrator)</strong>
+                                    <span>Anda dapat membuka sesi kasir darurat untuk membantu operasional cabang.</span>
                                 </div>
                             </div>
                         @endif
 
-                        <form action="{{ $bukaShiftRoute }}" method="POST">
+                        {{-- Rule 7: Validasi pergantian shift (Tidak boleh mulai jika shift sebelumnya belum ditutup) --}}
+                        <div id="alertShiftActiveBlock" class="alert alert-danger border-0 rounded-4 d-flex align-items-start gap-3 mb-4 p-3 shadow-sm {{ $activeBranchShift ? '' : 'd-none' }}">
+                            <div class="bg-danger text-white rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                                <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+                            </div>
+                            <div class="small">
+                                <strong class="d-block text-danger fs-6 mb-1">Pergantian Shift Belum Dapat Dimulai</strong>
+                                <span id="textShiftActiveWarning">
+                                    @if($activeBranchShift)
+                                        Pergantian shift tidak dapat dimulai! <strong>{{ $activeBranchShift->nama_shift ?? 'Shift Sebelumnya' }}</strong> masih dibuka oleh kasir <strong>{{ $activeBranchShift->user?->name ?? 'Petugas' }}</strong> (sejak {{ $activeBranchShift->waktu_buka?->format('H:i') }} WIB) dan belum melakukan proses tutup kasir. Tutup kasir shift sebelumnya harus diselesaikan terlebih dahulu.
+                                    @endif
+                                </span>
+                            </div>
+                        </div>
+
+                        <form action="{{ $bukaShiftRoute }}" method="POST" id="formBukaKasir">
                             @csrf
 
                             <!-- Info Kasir -->
@@ -84,7 +101,7 @@
                                         <span class="input-group-text bg-light border-end-0 text-success"><i class="bi bi-shop"></i></span>
                                         <input type="text" class="form-control bg-light border-start-0 fw-bold text-dark" 
                                                value="{{ auth()->user()->tokoCabang->nama_cabang }} - {{ auth()->user()->tokoCabang->alamat }}" readonly>
-                                        <input type="hidden" name="toko_cabang_id" value="{{ auth()->user()->toko_cabang_id }}">
+                                        <input type="hidden" name="toko_cabang_id" id="inputTokoCabangHidden" value="{{ auth()->user()->toko_cabang_id }}">
                                     </div>
                                     <div class="form-text text-muted small mt-1">
                                         <i class="bi bi-check-circle-fill text-success me-1"></i>Outlet otomatis ditetapkan sesuai penempatan akun kasir Anda.
@@ -96,10 +113,10 @@
                                     <label class="form-label small fw-semibold text-muted">Pilih Outlet Cabang Operasional <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-light border-end-0"><i class="bi bi-shop"></i></span>
-                                        <select name="toko_cabang_id" class="form-select border-start-0" required>
+                                        <select name="toko_cabang_id" id="selectTokoCabang" class="form-select border-start-0" required>
                                             <option value="" disabled {{ old('toko_cabang_id') ? '' : 'selected' }}>Pilih Outlet</option>
                                             @foreach($cabangs as $cabang)
-                                                <option value="{{ $cabang->id }}" {{ old('toko_cabang_id') == $cabang->id ? 'selected' : '' }}>
+                                                <option value="{{ $cabang->id }}" {{ old('toko_cabang_id', $cabangs->first()?->id) == $cabang->id ? 'selected' : '' }}>
                                                     {{ $cabang->nama_cabang }} - {{ $cabang->alamat }}
                                                 </option>
                                             @endforeach
@@ -107,13 +124,81 @@
                                     </div>
                                     @if($isAdmin)
                                         <div class="form-text text-muted small mt-1">
-                                            <i class="bi bi-info-circle me-1"></i>Pilih outlet
+                                            <i class="bi bi-info-circle me-1"></i>Pilih outlet cabang yang akan Anda buka kasirnya.
                                         </div>
                                     @endif
                                 </div>
                             @endif
 
-                            <!-- Modal Awal Kas -->
+                            <!-- Master Shift Operasional (Rule 1, 2, 5) -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-muted d-flex justify-content-between align-items-center">
+                                    <span>Pilih Shift Kerja Operasional <span class="text-danger">*</span></span>
+                                    <span class="badge bg-light text-muted border font-monospace" style="font-size: 0.72rem;">Acuan Fleksibel</span>
+                                </label>
+                                
+                                <div class="row g-2" id="shiftSelectorGroup">
+                                    @foreach($availableShifts as $idx => $s)
+                                        @php
+                                            $isDefault = old('shift_id') ? (old('shift_id') == $s->id) : ($idx === 0);
+                                        @endphp
+                                        <div class="col-6">
+                                            <input type="radio" class="btn-check shift-radio-input" name="shift_id" id="shift_option_{{ $s->id }}" 
+                                                   value="{{ $s->id }}" {{ $isDefault ? 'checked' : '' }}
+                                                   data-is-otomatis="{{ $s->isOtomatisModal() ? '1' : '0' }}"
+                                                   data-jam-mulai="{{ $s->jam_mulai }}"
+                                                   data-jam-selesai="{{ $s->jam_selesai }}"
+                                                   data-nama="{{ $s->nama_shift }}">
+                                            <label class="btn btn-outline-light border text-start w-100 p-2 p-md-3 rounded-3 h-100 position-relative shift-card-label" for="shift_option_{{ $s->id }}" style="cursor: pointer; transition: all 0.2s ease;">
+                                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                                    <strong class="text-dark d-block small fs-6">{{ $s->nama_shift }}</strong>
+                                                    @if($s->isOtomatisModal())
+                                                        <span class="badge bg-info-subtle text-info border border-info rounded-pill px-2 py-0" style="font-size: 0.65rem;">
+                                                            <i class="bi bi-arrow-repeat me-1"></i>Auto Modal
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-success-subtle text-success border border-success rounded-pill px-2 py-0" style="font-size: 0.65rem;">
+                                                            <i class="bi bi-pencil-fill me-1"></i>Manual
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                <div class="small text-muted font-monospace mb-1" style="font-size: 0.75rem;">
+                                                    <i class="bi bi-clock me-1 text-primary"></i>{{ $s->formatted_jadwal }}
+                                                </div>
+                                                <div class="text-secondary" style="font-size: 0.72rem; line-height: 1.2;">
+                                                    @if($s->isOtomatisModal())
+                                                        Otomatis dari saldo akhir Shift 1
+                                                    @else
+                                                        Input uang tunai kasir manual
+                                                    @endif
+                                                </div>
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="form-text text-muted small mt-1">
+                                    <i class="bi bi-info-circle me-1"></i>Jam shift sebagai acuan operasional, waktu buka dicatat otomatis oleh sistem.
+                                </div>
+                            </div>
+
+                            <!-- Rule 4 Notice Box: Auto Modal Shift 2 -->
+                            <div id="noticeAutoModalShift2" class="alert alert-info-subtle border border-info-subtle rounded-3 p-3 mb-3 d-none">
+                                <div class="d-flex gap-2 align-items-start">
+                                    <i class="bi bi-arrow-repeat text-info fs-5 flex-shrink-0"></i>
+                                    <div class="small">
+                                        <strong class="d-block text-dark mb-1">Modal Awal Otomatis Shift 2 (Rule 4)</strong>
+                                        <span id="textInfoSaldoShift1">
+                                            @if($lastClosedShift && $lastClosedShift->modal_akhir !== null)
+                                                Sistem otomatis mengambil saldo akhir <strong>{{ $lastClosedShift->nama_shift }}</strong> (Rp {{ number_format($lastClosedShift->modal_akhir, 0, ',', '.') }}) yang ditutup oleh {{ $lastClosedShift->user?->name ?? 'Kasir' }} sebagai modal awal Shift 2.
+                                            @else
+                                                Sistem akan mengambil saldo akhir dari penutupan Shift 1 sebelumnya di outlet ini.
+                                            @endif
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Modal Awal Kas (Rule 3 & Rule 4) -->
                             <div class="mb-3">
                                 <label class="form-label small fw-semibold text-muted">Nominal Modal Awal Kas (Rp) <span class="text-danger">*</span></label>
                                 <div class="input-group mb-2">
@@ -122,8 +207,8 @@
                                            class="form-control border-start-0 font-monospace fs-5 fw-bold" 
                                            placeholder="0" value="{{ old('modal_awal', 200000) }}" required>
                                 </div>
-                                <!-- Quick Suggestion Chips -->
-                                <div class="d-flex flex-wrap gap-1">
+                                <!-- Quick Suggestion Chips (Tampil pada modal manual Shift 1) -->
+                                <div class="d-flex flex-wrap gap-1" id="quickChipsWrapper">
                                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small btn-quick-modal" data-val="100000">Rp 100.000</button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small btn-quick-modal" data-val="200000">Rp 200.000</button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small btn-quick-modal" data-val="300000">Rp 300.000</button>
@@ -134,10 +219,10 @@
                             <!-- Catatan Pembukaan -->
                             <div class="mb-4">
                                 <label class="form-label small fw-semibold text-muted">Catatan Pembukaan (Opsional)</label>
-                                <textarea name="catatan_buka" class="form-control rounded-3" rows="2" placeholder="Kondisi laci kasir, uang kembalian pecahan, dll...">{{ old('catatan_buka') }}</textarea>
+                                <textarea name="catatan_buka" class="form-control rounded-3" rows="2" placeholder="Kondisi laci kasir, uang kembalian pecahan, pergantian kasir, dll...">{{ old('catatan_buka') }}</textarea>
                             </div>
 
-                            <button type="submit" class="btn btn-emerald w-100 py-3 rounded-3 shadow-sm fw-bold fs-6 d-flex align-items-center justify-content-center gap-2">
+                            <button type="submit" id="btnSubmitBukaKasir" class="btn btn-emerald w-100 py-3 rounded-3 shadow-sm fw-bold fs-6 d-flex align-items-center justify-content-center gap-2" {{ $activeBranchShift ? 'disabled' : '' }}>
                                 <i class="bi bi-box-arrow-in-right fs-5"></i>
                                 <span>Buka Kasir & Mulai Transaksi</span>
                             </button>
@@ -165,6 +250,14 @@
                                 <span class="badge bg-emerald-subtle text-emerald border border-emerald rounded-pill px-3 py-1">
                                     <i class="bi bi-record-fill me-1"></i>Shift Aktif
                                 </span>
+                                @if($activeShift->nama_shift)
+                                    <span class="badge bg-primary-subtle text-primary border border-primary rounded-pill px-3 py-1">
+                                        <i class="bi bi-clock-history me-1"></i>{{ $activeShift->nama_shift }}
+                                        @if($activeShift->jam_mulai_jadwal && $activeShift->jam_selesai_jadwal)
+                                            ({{ substr($activeShift->jam_mulai_jadwal, 0, 5) }} - {{ substr($activeShift->jam_selesai_jadwal, 0, 5) }} WIB)
+                                        @endif
+                                    </span>
+                                @endif
                                 @if($isAdmin)
                                     <span class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill px-3 py-1">
                                         <i class="bi bi-shield-exclamation me-1"></i>Mode Darurat Admin
@@ -174,7 +267,11 @@
                             <div class="text-muted small">
                                 Petugas: <strong>{{ auth()->user()->name }}</strong> &bull; 
                                 Outlet: <strong class="text-dark">{{ $activeShift->tokoCabang->nama_cabang }}</strong> &bull; 
+                                Shift: <strong class="text-primary">{{ $activeShift->nama_shift ?? 'Shift Kasir' }}</strong> &bull; 
                                 Buka: {{ $activeShift->waktu_buka->isoFormat('D MMM Y, HH:mm') }} WIB
+                                @if($activeShift->keterangan_waktu)
+                                    <span class="badge bg-light text-secondary border ms-1" title="Deviasi waktu operasional"><i class="bi bi-info-circle me-1"></i>{{ $activeShift->keterangan_waktu }}</span>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -1145,6 +1242,16 @@
                                 <div class="form-text small">Hitung dan masukkan total uang fisik yang ada di laci kasir saat ini.</div>
                             </div>
 
+                            <!-- Rule 4 & 7 Notice: Handover saldo ke shift berikutnya -->
+                            <div class="alert alert-info-subtle border border-info-subtle rounded-3 p-3 small mb-3">
+                                <div class="d-flex gap-2">
+                                    <i class="bi bi-arrow-repeat text-info fs-5 flex-shrink-0"></i>
+                                    <div>
+                                        <strong>Pergantian Shift Otomatis:</strong> Saldo akhir kasir yang Anda konfirmasi akan otomatis dicatat dan menjadi <strong>Modal Awal untuk Shift 2</strong> berikutnya di cabang ini.
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Catatan Penutupan -->
                             <div class="mb-2">
                                 <label class="form-label small fw-semibold text-muted">Catatan (Opsional)</label>
@@ -1408,6 +1515,21 @@
             font-size: 0.7rem;
         }
     }
+
+    /* Master Shift Cards */
+    .shift-card-label {
+        background-color: #ffffff;
+        border-color: #e2e8f0 !important;
+    }
+    .shift-card-label:hover {
+        background-color: #f8fafc;
+        border-color: #cbd5e1 !important;
+    }
+    .shift-radio-input:checked + .shift-card-label {
+        background-color: #f0fdf4 !important;
+        border-color: #059669 !important;
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.12) !important;
+    }
 </style>
 @endsection
 
@@ -1416,16 +1538,110 @@
 document.addEventListener('DOMContentLoaded', function () {
 
     // -------------------------------------------------------------
-    // FORM BUKA KASIR: QUICK MODAL CHIPS
+    // MASTER SHIFT & MODAL AWAL DYNAMIC BEHAVIOR (Rules 1 - 7)
     // -------------------------------------------------------------
+    const shiftRadios = document.querySelectorAll('.shift-radio-input');
+    const selectTokoCabang = document.getElementById('selectTokoCabang');
+    const inputTokoCabangHidden = document.getElementById('inputTokoCabangHidden');
+    const inputModalAwal = document.getElementById('inputModalAwal');
+    const quickChipsWrapper = document.getElementById('quickChipsWrapper');
+    const noticeAutoModalShift2 = document.getElementById('noticeAutoModalShift2');
+    const textInfoSaldoShift1 = document.getElementById('textInfoSaldoShift1');
+    const alertShiftActiveBlock = document.getElementById('alertShiftActiveBlock');
+    const textShiftActiveWarning = document.getElementById('textShiftActiveWarning');
+    const btnSubmitBukaKasir = document.getElementById('btnSubmitBukaKasir');
+
+    function checkShiftAvailability() {
+        if (!shiftRadios.length) return;
+
+        const selectedRadio = document.querySelector('.shift-radio-input:checked');
+        const shiftId = selectedRadio ? selectedRadio.value : '';
+        const isOtomatis = selectedRadio ? (selectedRadio.dataset.isOtomatis === '1') : false;
+        const cabangId = selectTokoCabang ? selectTokoCabang.value : (inputTokoCabangHidden ? inputTokoCabangHidden.value : '');
+
+        if (!cabangId) return;
+
+        // Toggle UI based on client data first for snappy response
+        if (isOtomatis) {
+            if (noticeAutoModalShift2) noticeAutoModalShift2.classList.remove('d-none');
+            if (quickChipsWrapper) quickChipsWrapper.classList.add('d-none');
+            if (inputModalAwal) {
+                inputModalAwal.setAttribute('readonly', 'readonly');
+                inputModalAwal.classList.add('bg-light');
+            }
+        } else {
+            if (noticeAutoModalShift2) noticeAutoModalShift2.classList.add('d-none');
+            if (quickChipsWrapper) quickChipsWrapper.classList.remove('d-none');
+            if (inputModalAwal) {
+                inputModalAwal.removeAttribute('readonly');
+                inputModalAwal.classList.remove('bg-light');
+            }
+        }
+
+        // Backend check for accurate Rule 4 auto balance and Rule 7 active shift check
+        const shiftInfoUrl = '{{ $shiftInfoRoute }}';
+        fetch(`${shiftInfoUrl}?toko_cabang_id=${encodeURIComponent(cabangId)}&shift_id=${encodeURIComponent(shiftId)}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Rule 7: Validasi pergantian shift
+                if (!data.can_start) {
+                    if (alertShiftActiveBlock) {
+                        alertShiftActiveBlock.classList.remove('d-none');
+                        if (textShiftActiveWarning) {
+                            textShiftActiveWarning.innerHTML = data.active_shift_warning || 'Shift sebelumnya belum ditutup.';
+                        }
+                    }
+                    if (btnSubmitBukaKasir) {
+                        btnSubmitBukaKasir.disabled = true;
+                    }
+                } else {
+                    if (alertShiftActiveBlock) alertShiftActiveBlock.classList.add('d-none');
+                    if (btnSubmitBukaKasir) btnSubmitBukaKasir.disabled = false;
+                }
+
+                // Rule 4: Modal awal Shift 2 otomatis
+                if (data.shift && data.shift.is_otomatis) {
+                    if (inputModalAwal) {
+                        inputModalAwal.value = data.modal_awal_otomatis;
+                    }
+                    if (textInfoSaldoShift1 && data.info_saldo_akhir) {
+                        textInfoSaldoShift1.innerHTML = data.info_saldo_akhir;
+                    }
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching shift info:', err);
+        });
+    }
+
+    if (shiftRadios.length) {
+        shiftRadios.forEach(radio => {
+            radio.addEventListener('change', checkShiftAvailability);
+        });
+    }
+    if (selectTokoCabang) {
+        selectTokoCabang.addEventListener('change', checkShiftAvailability);
+    }
+
+    // FORM BUKA KASIR: QUICK MODAL CHIPS
     document.querySelectorAll('.btn-quick-modal').forEach(btn => {
         btn.addEventListener('click', function () {
-            const input = document.getElementById('inputModalAwal');
-            if (input) {
-                input.value = this.getAttribute('data-val');
+            if (inputModalAwal && !inputModalAwal.hasAttribute('readonly')) {
+                inputModalAwal.value = this.getAttribute('data-val');
             }
         });
     });
+
+    if (shiftRadios.length) {
+        checkShiftAvailability();
+    }
 
     // -------------------------------------------------------------
     // POS ORDER STATE

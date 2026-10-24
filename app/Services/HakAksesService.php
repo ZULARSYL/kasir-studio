@@ -179,6 +179,13 @@ class HakAksesService
                         'url' => '/admin/master/barang',
                         'description' => 'Katalog produk dan barang yang dijual di cafe.',
                     ],
+                    'master.shift' => [
+                        'label' => 'Master Data Shift',
+                        'icon' => 'bi-clock-history',
+                        'route' => 'admin.master.shift',
+                        'url' => '/admin/master/shift',
+                        'description' => 'Konfigurasi jadwal shift operasional kasir dan aturan modal awal.',
+                    ],
                 ],
             ],
 

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Film;
+use App\Models\FilmStokCabang;
 use App\Models\GenreFilm;
 use App\Models\KasirShift;
 use App\Models\Room;
@@ -387,5 +388,228 @@ class FilmTest extends TestCase
         ]);
         $response4->assertOk();
         $this->assertSame('success', $response4->json('status'));
+    }
+
+    /**
+     * Test Admin dapat menambah dan memperbarui stok film terpisah per outlet.
+     */
+    public function test_admin_can_set_and_update_stock_per_outlet(): void
+    {
+        $admin = $this->getAdmin();
+        $cabangs = TokoCabang::take(2)->get();
+        $this->assertCount(2, $cabangs);
+        $cabangA = $cabangs[0];
+        $cabangB = $cabangs[1];
+        $genre = GenreFilm::first();
+
+        // 1. Simpan Film baru dengan stok berbeda per outlet (Contoh: Avengers stok 2 di Outlet A, stok 5 di Outlet B)
+        $storeData = [
+            'judul' => 'Avengers: Endgame',
+            'durasi_menit' => 180,
+            'harga_per_menit' => 500,
+            'usia_rating' => '13+',
+            'status' => 'tersedia',
+            'genres' => [$genre->id],
+            'stok_cabang' => [
+                $cabangA->id => 2,
+                $cabangB->id => 5,
+            ],
+        ];
+
+        $response = $this->actingAs($admin)->post(route('admin.film.store'), $storeData);
+        $response->assertRedirect(route('admin.film.index'));
+
+        $film = Film::where('judul', 'Avengers: Endgame')->first();
+        $this->assertNotNull($film);
+
+        // Assert stok di DB terpisah secara independen
+        $this->assertDatabaseHas('film_stok_cabangs', [
+            'film_id' => $film->id,
+            'toko_cabang_id' => $cabangA->id,
+            'stok' => 2,
+        ]);
+        $this->assertDatabaseHas('film_stok_cabangs', [
+            'film_id' => $film->id,
+            'toko_cabang_id' => $cabangB->id,
+            'stok' => 5,
+        ]);
+
+        $this->assertEquals(2, $film->getLimitPenggunaanForCabang($cabangA->id));
+        $this->assertEquals(5, $film->getLimitPenggunaanForCabang($cabangB->id));
+
+        // 2. Admin memperbarui stok film
+        $updateData = [
+            'judul' => 'Avengers: Endgame (Remastered)',
+            'durasi_menit' => 180,
+            'harga_per_menit' => 500,
+            'usia_rating' => '13+',
+            'status' => 'tersedia',
+            'genres' => [$genre->id],
+            'stok_cabang' => [
+                $cabangA->id => 3,
+                $cabangB->id => 7,
+            ],
+        ];
+
+        $updateResponse = $this->actingAs($admin)->put(route('admin.film.update', $film->id), $updateData);
+        $updateResponse->assertRedirect(route('admin.film.index'));
+
+        $film->refresh();
+        $this->assertEquals(3, $film->getLimitPenggunaanForCabang($cabangA->id));
+        $this->assertEquals(7, $film->getLimitPenggunaanForCabang($cabangB->id));
+    }
+
+    /**
+     * Test: Stok film independen per outlet.
+     * Contoh: Avengers memiliki stok 2 di Outlet A dan stok 5 di Outlet B.
+     * Jika stok di Outlet A berkurang, stok di Outlet B tidak ikut berubah.
+     */
+    public function test_film_stock_is_managed_independently_per_outlet(): void
+    {
+        $cabangs = TokoCabang::take(2)->get();
+        $this->assertCount(2, $cabangs);
+        $cabangA = $cabangs[0]; // Outlet A
+        $cabangB = $cabangs[1]; // Outlet B
+        $metodeBayar = TipePembayaran::first();
+
+        // Akun Kasir Outlet A dan Kasir Outlet B
+        $kasirA = User::firstOrCreate(
+            ['username' => 'kasir_outlet_a'],
+            [
+                'name' => 'Kasir Outlet A',
+                'password' => Hash::make('password123'),
+                'role' => 'kasir',
+                'toko_cabang_id' => $cabangA->id,
+            ]
+        );
+        $kasirB = User::firstOrCreate(
+            ['username' => 'kasir_outlet_b'],
+            [
+                'name' => 'Kasir Outlet B',
+                'password' => Hash::make('password123'),
+                'role' => 'kasir',
+                'toko_cabang_id' => $cabangB->id,
+            ]
+        );
+
+        // Buat film Avengers (judul sama, satu entitas di films)
+        $film = Film::create([
+            'judul' => 'Avengers: Infinity War',
+            'durasi_menit' => 150,
+            'harga_per_menit' => 500,
+            'total_harga' => 75000,
+            'status' => 'tersedia',
+        ]);
+
+        // Set stok Outlet A = 2, Outlet B = 5
+        FilmStokCabang::create([
+            'film_id' => $film->id,
+            'toko_cabang_id' => $cabangA->id,
+            'stok' => 2,
+        ]);
+        FilmStokCabang::create([
+            'film_id' => $film->id,
+            'toko_cabang_id' => $cabangB->id,
+            'stok' => 5,
+        ]);
+
+        // Buat room di Outlet A dan Outlet B
+        $roomA1 = Room::create(['toko_cabang_id' => $cabangA->id, 'nama' => 'Studio A1', 'kapasitas' => 4]);
+        $roomA2 = Room::create(['toko_cabang_id' => $cabangA->id, 'nama' => 'Studio A2', 'kapasitas' => 4]);
+        $roomA3 = Room::create(['toko_cabang_id' => $cabangA->id, 'nama' => 'Studio A3', 'kapasitas' => 4]);
+
+        $roomB1 = Room::create(['toko_cabang_id' => $cabangB->id, 'nama' => 'Studio B1', 'kapasitas' => 4]);
+
+        // Buka shift kasir di Outlet A dan Outlet B
+        KasirShift::create([
+            'user_id' => $kasirA->id,
+            'toko_cabang_id' => $cabangA->id,
+            'modal_awal' => 200000,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+        KasirShift::create([
+            'user_id' => $kasirB->id,
+            'toko_cabang_id' => $cabangB->id,
+            'modal_awal' => 200000,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+
+        // KONDISI AWAL:
+        // Outlet A: Limit 2, Aktif 0, Sisa 2
+        $this->assertEquals(2, $film->getLimitPenggunaanForCabang($cabangA->id));
+        $this->assertEquals(0, $film->getActiveRoomsCount($cabangA->id));
+        $this->assertEquals(2, $film->getSisaSlot($cabangA->id));
+        $this->assertTrue($film->isAvailableForBooking($cabangA->id));
+
+        // Outlet B: Limit 5, Aktif 0, Sisa 5
+        $this->assertEquals(5, $film->getLimitPenggunaanForCabang($cabangB->id));
+        $this->assertEquals(0, $film->getActiveRoomsCount($cabangB->id));
+        $this->assertEquals(5, $film->getSisaSlot($cabangB->id));
+        $this->assertTrue($film->isAvailableForBooking($cabangB->id));
+
+        // TAHAP 1: Room A1 di Outlet A memesan film Avengers
+        $respA1 = $this->actingAs($kasirA)->postJson(route('kasir.checkout'), [
+            'film_id' => $film->id,
+            'room_id' => $roomA1->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+        ]);
+        $respA1->assertOk();
+
+        // Verifikasi Outlet A berkurang stoknya (dari 2 menjadi 1)
+        $this->assertEquals(1, $film->getActiveRoomsCount($cabangA->id));
+        $this->assertEquals(1, $film->getSisaSlot($cabangA->id));
+        $this->assertTrue($film->isAvailableForBooking($cabangA->id));
+
+        // PENTING: Verifikasi Outlet B TIDAK IKUT BERUBAH! (Tetap 0 terpakai, sisa 5)
+        $this->assertEquals(0, $film->getActiveRoomsCount($cabangB->id));
+        $this->assertEquals(5, $film->getSisaSlot($cabangB->id));
+        $this->assertTrue($film->isAvailableForBooking($cabangB->id));
+
+        // TAHAP 2: Room A2 di Outlet A memesan film Avengers (Limit Outlet A = 2 tercapai!)
+        $respA2 = $this->actingAs($kasirA)->postJson(route('kasir.checkout'), [
+            'film_id' => $film->id,
+            'room_id' => $roomA2->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+        ]);
+        $respA2->assertOk();
+
+        // Verifikasi Outlet A sekarang penuh (2/2 terpakai, sisa 0)
+        $this->assertEquals(2, $film->getActiveRoomsCount($cabangA->id));
+        $this->assertEquals(0, $film->getSisaSlot($cabangA->id));
+        $this->assertFalse($film->isAvailableForBooking($cabangA->id));
+
+        // PENTING: Outlet B masih memiliki stok penuh 5 dan tetap bisa dipesan!
+        $this->assertEquals(0, $film->getActiveRoomsCount($cabangB->id));
+        $this->assertEquals(5, $film->getSisaSlot($cabangB->id));
+        $this->assertTrue($film->isAvailableForBooking($cabangB->id));
+
+        // TAHAP 3: Kasir A mencoba memesan Avengers di Room A3 pada Outlet A -> HARUS DITOLAK
+        $respA3 = $this->actingAs($kasirA)->postJson(route('kasir.checkout'), [
+            'film_id' => $film->id,
+            'room_id' => $roomA3->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+        ]);
+        $respA3->assertStatus(422);
+        $this->assertStringContainsString('mencapai batas maksimal', $respA3->json('message'));
+
+        // TAHAP 4: Kasir B memesan Avengers di Room B1 pada Outlet B -> HARUS BERHASIL
+        $respB1 = $this->actingAs($kasirB)->postJson(route('kasir.checkout'), [
+            'film_id' => $film->id,
+            'room_id' => $roomB1->id,
+            'tipe_pembayaran_id' => $metodeBayar->id,
+        ]);
+        $respB1->assertOk();
+
+        // Verifikasi Outlet B sekarang terpakai 1, sisa 4
+        $this->assertEquals(1, $film->getActiveRoomsCount($cabangB->id));
+        $this->assertEquals(4, $film->getSisaSlot($cabangB->id));
+        $this->assertTrue($film->isAvailableForBooking($cabangB->id));
+
+        // Outlet A tetap terpakai 2, sisa 0 (tidak terpengaruh oleh Outlet B)
+        $this->assertEquals(2, $film->getActiveRoomsCount($cabangA->id));
+        $this->assertEquals(0, $film->getSisaSlot($cabangA->id));
+        $this->assertFalse($film->isAvailableForBooking($cabangA->id));
     }
 }

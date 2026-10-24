@@ -14,6 +14,7 @@ use App\Http\Controllers\Master\MenuCafeController;
 use App\Http\Controllers\Master\PromoController;
 use App\Http\Controllers\Master\RoomController;
 use App\Http\Controllers\Master\SatuanBarangController;
+use App\Http\Controllers\Master\ShiftController;
 use App\Http\Controllers\Master\TipePembayaranController;
 use App\Http\Controllers\Master\TokoCabangController;
 use Illuminate\Support\Facades\Route;
@@ -104,6 +105,11 @@ Route::middleware(['auth', 'role:admin', 'menu.access'])
             // 11. Master Data Barang
             Route::get('barang', [BarangController::class, 'index'])->name('barang');
             Route::resource('barang', BarangController::class);
+
+            // 12. Master Data Shift
+            Route::get('shift', [ShiftController::class, 'index'])->name('shift');
+            Route::post('shift/{id}/toggle-status', [ShiftController::class, 'toggleStatus'])->name('shift.toggle-status');
+            Route::resource('shift', ShiftController::class);
         });
 
         // Kepegawaian (Jabatan & Pegawai)
@@ -181,6 +187,7 @@ Route::middleware(['auth', 'role:admin', 'menu.access'])
         // Menu Kasir POS (Mode Darurat Admin)
         Route::prefix('kasir')->name('kasir.')->group(function () {
             Route::get('/', [KasirController::class, 'index'])->name('index');
+            Route::get('/shift/info', [KasirController::class, 'getShiftInfo'])->name('shift.info');
             Route::post('/shift/buka', [KasirController::class, 'bukaShift'])->name('shift.buka');
             Route::post('/shift/tutup', [KasirController::class, 'tutupShift'])->name('shift.tutup');
             Route::post('/cek-promo', [KasirController::class, 'cekPromo'])->name('cek-promo');
@@ -204,6 +211,7 @@ Route::middleware(['auth', 'role:admin,kasir'])
     ->name('kasir.')
     ->group(function () {
         Route::get('/kasir', [KasirController::class, 'index'])->name('kasir');
+        Route::get('/shift/info', [KasirController::class, 'getShiftInfo'])->name('shift.info');
         Route::post('/shift/buka', [KasirController::class, 'bukaShift'])->name('shift.buka');
         Route::post('/shift/tutup', [KasirController::class, 'tutupShift'])->name('shift.tutup');
         Route::post('/cek-promo', [KasirController::class, 'cekPromo'])->name('cek-promo');

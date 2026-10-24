@@ -1059,6 +1059,15 @@
                                             </a>
                                         </li>
                                     @endif
+                                    @if ($authUser?->canAccessMenu('master.shift'))
+                                        <li class="sidebar-submenu-item">
+                                            <a href="{{ Route::has('admin.master.shift') ? route('admin.master.shift') : url('/admin/master/shift') }}" 
+                                               class="sidebar-submenu-link {{ request()->is('admin/master/shift*') ? 'active' : '' }}">
+                                                <i class="bi bi-clock-history"></i>
+                                                <span>Master Data Shift</span>
+                                            </a>
+                                        </li>
+                                    @endif
                                 </ul>
                             </div>
                         </li>

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Film;
+use App\Models\FilmStokCabang;
 use App\Models\GenreFilm;
+use App\Models\TokoCabang;
 use App\Services\ImageCompressionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +26,7 @@ class FilmController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Film::with('genres');
+        $query = Film::with(['genres', 'stokCabangs']);
 
         // Filter Pencarian
         if ($request->filled('search')) {
@@ -56,8 +58,9 @@ class FilmController extends Controller
 
         $films = $query->latest()->paginate(10)->withQueryString();
         $genres = GenreFilm::orderBy('nama_genre', 'asc')->get();
+        $cabangs = TokoCabang::orderBy('nama_cabang', 'asc')->get();
 
-        return view('admin.film.index', compact('films', 'genres'));
+        return view('admin.film.index', compact('films', 'genres', 'cabangs'));
     }
 
     /**
@@ -69,7 +72,9 @@ class FilmController extends Controller
         $validated = $request->validate([
             'judul' => 'required|string|max:255',
             'durasi_menit' => 'required|integer|min:1|max:1440',
-            'limit_penggunaan' => 'required|integer|min:1|max:100',
+            'limit_penggunaan' => 'nullable|integer|min:1|max:100',
+            'stok_cabang' => 'nullable|array',
+            'stok_cabang.*' => 'nullable|integer|min:0|max:100',
             'harga_per_menit' => 'required|numeric|min:0',
             'tahun_rilis' => 'nullable|integer|min:1900|max:2099',
             'sutradara' => 'nullable|string|max:255',
@@ -113,14 +118,19 @@ class FilmController extends Controller
             $posterPath = $this->compressionService->compressAndStore($file, 'films');
         }
 
-        // 4. Simpan Record Film & Sinkronisasi Genre (Many-to-Many)
-        DB::transaction(function () use ($validated, $durasiMenit, $hargaPerMenit, $totalHarga, $posterPath) {
+        // 4. Simpan Record Film, Stok Terpisah Tiap Outlet, & Sinkronisasi Genre (Many-to-Many)
+        DB::transaction(function () use ($validated, $durasiMenit, $hargaPerMenit, $totalHarga, $posterPath, $request) {
+            $stokCabangInputs = $request->input('stok_cabang', []);
+            $defaultLimit = !empty($validated['limit_penggunaan']) 
+                ? (int) $validated['limit_penggunaan'] 
+                : (!empty($stokCabangInputs) ? (int) max($stokCabangInputs) : 1);
+
             $film = Film::create([
                 'judul' => $validated['judul'],
                 'poster' => $posterPath,
                 'sinopsis' => $validated['sinopsis'] ?? null,
                 'durasi_menit' => $durasiMenit,
-                'limit_penggunaan' => (int) ($validated['limit_penggunaan'] ?? 1),
+                'limit_penggunaan' => $defaultLimit,
                 'harga_per_menit' => $hargaPerMenit,
                 'total_harga' => $totalHarga,
                 'tahun_rilis' => $validated['tahun_rilis'] ?? null,
@@ -132,6 +142,19 @@ class FilmController extends Controller
             // Filter dan buang duplikat ID genre jika ada
             $uniqueGenreIds = array_values(array_unique($validated['genres']));
             $film->genres()->sync($uniqueGenreIds);
+
+            // Simpan stok terpisah untuk masing-masing outlet
+            $cabangs = TokoCabang::all();
+            foreach ($cabangs as $cabang) {
+                $stok = isset($stokCabangInputs[$cabang->id]) 
+                    ? (int) $stokCabangInputs[$cabang->id] 
+                    : $defaultLimit;
+
+                FilmStokCabang::updateOrCreate(
+                    ['film_id' => $film->id, 'toko_cabang_id' => $cabang->id],
+                    ['stok' => $stok]
+                );
+            }
         });
 
         return redirect()->route('admin.film.index')
@@ -147,7 +170,9 @@ class FilmController extends Controller
         $validated = $request->validate([
             'judul' => 'required|string|max:255',
             'durasi_menit' => 'required|integer|min:1|max:1440',
-            'limit_penggunaan' => 'required|integer|min:1|max:100',
+            'limit_penggunaan' => 'nullable|integer|min:1|max:100',
+            'stok_cabang' => 'nullable|array',
+            'stok_cabang.*' => 'nullable|integer|min:0|max:100',
             'harga_per_menit' => 'required|numeric|min:0',
             'tahun_rilis' => 'nullable|integer|min:1900|max:2099',
             'sutradara' => 'nullable|string|max:255',
@@ -196,13 +221,18 @@ class FilmController extends Controller
             $posterPath = $newPosterPath;
         }
 
-        DB::transaction(function () use ($film, $validated, $durasiMenit, $hargaPerMenit, $totalHarga, $posterPath) {
+        DB::transaction(function () use ($film, $validated, $durasiMenit, $hargaPerMenit, $totalHarga, $posterPath, $request) {
+            $stokCabangInputs = $request->input('stok_cabang', []);
+            $defaultLimit = !empty($validated['limit_penggunaan']) 
+                ? (int) $validated['limit_penggunaan'] 
+                : (!empty($stokCabangInputs) ? (int) max($stokCabangInputs) : ($film->limit_penggunaan ?? 1));
+
             $film->update([
                 'judul' => $validated['judul'],
                 'poster' => $posterPath,
                 'sinopsis' => $validated['sinopsis'] ?? null,
                 'durasi_menit' => $durasiMenit,
-                'limit_penggunaan' => (int) ($validated['limit_penggunaan'] ?? 1),
+                'limit_penggunaan' => $defaultLimit,
                 'harga_per_menit' => $hargaPerMenit,
                 'total_harga' => $totalHarga,
                 'tahun_rilis' => $validated['tahun_rilis'] ?? null,
@@ -213,6 +243,22 @@ class FilmController extends Controller
 
             $uniqueGenreIds = array_values(array_unique($validated['genres']));
             $film->genres()->sync($uniqueGenreIds);
+
+            // Simpan / perbarui stok film terpisah untuk setiap outlet (toko_cabang)
+            $cabangs = TokoCabang::all();
+            foreach ($cabangs as $cabang) {
+                if (isset($stokCabangInputs[$cabang->id])) {
+                    FilmStokCabang::updateOrCreate(
+                        ['film_id' => $film->id, 'toko_cabang_id' => $cabang->id],
+                        ['stok' => (int) $stokCabangInputs[$cabang->id]]
+                    );
+                } elseif (!empty($validated['limit_penggunaan'])) {
+                    FilmStokCabang::updateOrCreate(
+                        ['film_id' => $film->id, 'toko_cabang_id' => $cabang->id],
+                        ['stok' => (int) $validated['limit_penggunaan']]
+                    );
+                }
+            }
         });
 
         return redirect()->route('admin.film.index')
