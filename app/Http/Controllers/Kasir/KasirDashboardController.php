@@ -87,7 +87,9 @@ class KasirDashboardController extends Controller
             $sisaWaktuTeks = 'Tersedia';
 
             if ($latestTrx) {
-                $mulai = Carbon::parse($latestTrx->waktu_transaksi);
+                $mulai = $latestTrx->waktu_mulai_film 
+                    ? Carbon::parse($latestTrx->waktu_mulai_film) 
+                    : Carbon::parse($latestTrx->waktu_transaksi);
                 $durasi = (int) ($latestTrx->durasi_menit ?: ($latestTrx->film?->durasi_menit ?? 120));
                 $selesai = $mulai->copy()->addMinutes($durasi);
 

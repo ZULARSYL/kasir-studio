@@ -142,6 +142,49 @@ class KasirPosTest extends TestCase
         $response->assertSee('Bayar & Cetak Struk', false);
     }
 
+    public function test_kasir_pos_displays_today_sales_total_instead_of_shift_total(): void
+    {
+        $kasir = $this->getKasir();
+        $cabang = TokoCabang::first();
+        $tipePembayaran = TipePembayaran::first();
+
+        $shift = KasirShift::create([
+            'user_id' => $kasir->id,
+            'toko_cabang_id' => $cabang->id,
+            'modal_awal' => 200000,
+            'total_penjualan' => 900000,
+            'status' => 'buka',
+            'waktu_buka' => now(),
+        ]);
+
+        Transaksi::create([
+            'nomor_transaksi' => 'TRX-POS-TODAY-001',
+            'kasir_shift_id' => $shift->id,
+            'toko_cabang_id' => $cabang->id,
+            'user_id' => $kasir->id,
+            'tipe_pembayaran_id' => $tipePembayaran->id,
+            'total_bayar' => 125000,
+            'waktu_transaksi' => now(),
+        ]);
+
+        Transaksi::create([
+            'nomor_transaksi' => 'TRX-POS-YESTERDAY-001',
+            'kasir_shift_id' => $shift->id,
+            'toko_cabang_id' => $cabang->id,
+            'user_id' => $kasir->id,
+            'tipe_pembayaran_id' => $tipePembayaran->id,
+            'total_bayar' => 500000,
+            'waktu_transaksi' => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($kasir)->get(route('kasir.kasir'));
+
+        $response->assertOk();
+        $response->assertSee('GRAND TOTAL PEMBELIAN HARI INI');
+        $response->assertSee('Rp 125.000');
+        $response->assertDontSee('Rp 900.000');
+    }
+
     /**
      * Test validasi kode voucher promo pada menu kasir via AJAX.
      */
@@ -483,4 +526,3 @@ class KasirPosTest extends TestCase
         $strukRes->assertSee('Rp 65.000');
     }
 }
-

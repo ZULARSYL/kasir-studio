@@ -17,6 +17,7 @@ use App\Models\TipePembayaran;
 use App\Models\TokoCabang;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
+use App\Models\TransaksiFilmHistory;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -41,6 +42,7 @@ class KasirController extends Controller
                 'activeShift' => null,
                 'cabangs' => $cabangs,
                 'assignedCabang' => $user->tokoCabang,
+                'gantiFilmContext' => null,
             ]);
         }
 
@@ -48,6 +50,9 @@ class KasirController extends Controller
         $shift = $activeShift->load('tokoCabang');
 
         $now = Carbon::now();
+        $totalPendapatanToday = (float) Transaksi::whereDate('waktu_transaksi', Carbon::today())
+            ->where('toko_cabang_id', $shift->toko_cabang_id)
+            ->sum('total_bayar');
 
         // 1. Film yang tersedia beserta genrenya (Katalog Film sesuai referensi movie.png)
         $films = Film::with('genres')
@@ -69,7 +74,7 @@ class KasirController extends Controller
         $occupiedRoomIds = [];
 
         foreach ($activeTrxs as $trx) {
-            $mulai = Carbon::parse($trx->waktu_transaksi);
+            $mulai = $trx->waktu_mulai_film ? Carbon::parse($trx->waktu_mulai_film) : Carbon::parse($trx->waktu_transaksi);
             $durasi = (int) ($trx->durasi_menit ?: 120);
             $selesai = $mulai->copy()->addMinutes($durasi);
 
@@ -155,9 +160,81 @@ class KasirController extends Controller
             ->take(5)
             ->get();
 
+        // 7. Context Pergantian Film jika diakses via mode ganti_film (Rule 1, 2, 3)
+        $gantiFilmContext = null;
+        if ($request->get('mode') === 'ganti_film' && $request->filled('room_id')) {
+            $targetRoom = Room::where('id', $request->get('room_id'))
+                ->where('toko_cabang_id', $shift->toko_cabang_id)
+                ->first();
+
+            if (! $targetRoom) {
+                session()->flash('error', 'Room tidak ditemukan pada outlet cabang aktif saat ini.');
+            } else {
+                $latestTrx = Transaksi::with(['film', 'room', 'tipePembayaran'])
+                    ->where('room_id', $targetRoom->id)
+                    ->where('status', 'selesai')
+                    ->where('waktu_transaksi', '>=', $now->copy()->subHours(24))
+                    ->where('waktu_transaksi', '<=', $now)
+                    ->latest('waktu_transaksi')
+                    ->first();
+
+                if (! $latestTrx) {
+                    session()->flash('error', "Tidak ada penayangan aktif pada room {$targetRoom->nama}.");
+                } else {
+                    $waktuMulai = $latestTrx->waktu_mulai_film 
+                        ? Carbon::parse($latestTrx->waktu_mulai_film) 
+                        : Carbon::parse($latestTrx->waktu_transaksi);
+                    $durasiRencana = (int) ($latestTrx->durasi_menit ?: ($latestTrx->film?->durasi_menit ?? 120));
+                    $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+
+                    // Syarat 1: Hanya saat room berstatus sedang berlangsung
+                    if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
+                        session()->flash('error', "Pergantian film hanya dapat dilakukan ketika room {$targetRoom->nama} berstatus sedang berlangsung.");
+                    } else {
+                        $durasiAktual = max(1, (int) $waktuMulai->diffInMinutes($now));
+                        $durasiAktual = min($durasiAktual, $durasiRencana);
+
+                        $currentFilm = $latestTrx->film;
+                        $tarifPerMenit = (float) $currentFilm?->harga_per_menit > 0 
+                            ? (float) $currentFilm->harga_per_menit 
+                            : ((int) $durasiRencana > 0 ? (float) $latestTrx->harga_film / $durasiRencana : 0);
+
+                        $biayaAktualTerpakai = min((float) $latestTrx->harga_film, round($durasiAktual * $tarifPerMenit));
+
+                        $gantiFilmContext = [
+                            'is_mode_ganti' => true,
+                            'room_id' => $targetRoom->id,
+                            'room_nama' => $targetRoom->nama,
+                            'room_kapasitas' => $targetRoom->kapasitas,
+                            'transaksi_id' => $latestTrx->id,
+                            'nomor_transaksi' => $latestTrx->nomor_transaksi,
+                            'nama_pelanggan' => $latestTrx->nama_pelanggan,
+                            'film_id_lama' => $latestTrx->film_id,
+                            'film_judul_lama' => $currentFilm?->judul ?? 'Film Studio',
+                            'film_durasi_lama' => $durasiRencana,
+                            'harga_film_awal' => (float) $latestTrx->harga_film,
+                            'waktu_mulai_formatted' => $waktuMulai->translatedFormat('d F Y, H:i'),
+                            'waktu_mulai_time' => $waktuMulai->format('H:i'),
+                            'durasi_aktual_menit' => $durasiAktual,
+                            'tarif_per_menit' => $tarifPerMenit,
+                            'biaya_aktual_terpakai' => $biayaAktualTerpakai,
+                            'total_bayar_lama' => (float) $latestTrx->total_bayar,
+                            'tipe_pembayaran_lama' => $latestTrx->tipePembayaran?->metode_pembayaran ?? 'TUNAI',
+                            'harga_room' => (float) $latestTrx->harga_room,
+                            'denda_penonton' => (float) $latestTrx->denda_penonton,
+                            'subtotal_cafe' => (float) $latestTrx->subtotal_cafe,
+                            'diskon' => (float) $latestTrx->diskon,
+                            'catatan' => $latestTrx->catatan,
+                        ];
+                    }
+                }
+            }
+        }
+
         return view('kasir.kasir', [
             'hasActiveShift' => true,
             'activeShift' => $shift,
+            'totalPendapatanToday' => $totalPendapatanToday,
             'films' => $films,
             'genres' => $genres,
             'rooms' => $rooms,
@@ -167,6 +244,7 @@ class KasirController extends Controller
             'tipePembayarans' => $tipePembayarans,
             'promos' => $promos,
             'recentTransactions' => $recentTransactions,
+            'gantiFilmContext' => $gantiFilmContext,
         ]);
     }
 
@@ -414,6 +492,26 @@ class KasirController extends Controller
                 'waktu_transaksi' => now(),
             ]);
 
+            // Buat riwayat pemutaran film awal
+            $tarifPerMenit = (float) $film->harga_per_menit > 0 
+                ? (float) $film->harga_per_menit 
+                : ((int) $film->durasi_menit > 0 ? (float) $hargaFilm / (int) $film->durasi_menit : 0);
+
+            $transaksi->filmHistories()->create([
+                'film_id' => $film->id,
+                'room_id' => $room->id,
+                'judul_film' => $film->judul,
+                'waktu_mulai' => now(),
+                'waktu_selesai' => now()->copy()->addMinutes((int) $film->durasi_menit),
+                'durasi_menit_rencana' => (int) $film->durasi_menit,
+                'durasi_aktual_menit' => 0,
+                'tarif_per_menit' => $tarifPerMenit,
+                'biaya_film' => $hargaFilm,
+                'status' => 'berjalan',
+                'selisih_biaya' => 0,
+                'tipe_selisih' => 'pas',
+            ]);
+
             // 5. Simpan Rincian Cafe & Potong Stok FIFO
             foreach ($cafeOrderDetails as $detail) {
                 $transaksi->details()->create($detail);
@@ -486,5 +584,394 @@ class KasirController extends Controller
         $templateStruk = TemplateStruk::getActiveTemplate();
 
         return view('kasir.struk', compact('transaksi', 'templateStruk'));
+    }
+
+    /**
+     * Ambil data penayangan room aktif, rincian biaya berjalan, dan daftar film pengganti yang tersedia (Rule 1 & 2).
+     */
+    public function getGantiFilmData($roomId)
+    {
+        $room = Room::findOrFail($roomId);
+        $today = Carbon::today();
+        $now = Carbon::now();
+
+        // Cari transaksi aktif yang sedang menggunakan room ini
+        $latestTrx = Transaksi::with(['film', 'room', 'tipePembayaran', 'filmHistories'])
+            ->where('room_id', $room->id)
+            ->where('status', 'selesai')
+            ->whereDate('waktu_transaksi', $today)
+            ->latest('waktu_transaksi')
+            ->first();
+
+        if (! $latestTrx) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Tidak ada penayangan aktif pada {$room->nama}.",
+            ], 404);
+        }
+
+        $waktuMulai = $latestTrx->waktu_mulai_film 
+            ? Carbon::parse($latestTrx->waktu_mulai_film) 
+            : Carbon::parse($latestTrx->waktu_transaksi);
+        $durasiRencana = (int) ($latestTrx->durasi_menit ?: ($latestTrx->film?->durasi_menit ?? 120));
+        $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+
+        // Syarat 1: Hanya dapat dilakukan ketika room berstatus sedang berlangsung
+        if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Pergantian film hanya dapat dilakukan saat room sedang berlangsung penayangan. Status {$room->nama} saat ini tidak sedang aktif.",
+            ], 422);
+        }
+
+        $durasiAktual = max(1, (int) $waktuMulai->diffInMinutes($now));
+        $durasiAktual = min($durasiAktual, $durasiRencana);
+
+        $currentFilm = $latestTrx->film;
+        $tarifPerMenit = (float) $currentFilm?->harga_per_menit > 0 
+            ? (float) $currentFilm->harga_per_menit 
+            : ((int) $durasiRencana > 0 ? (float) $latestTrx->harga_film / $durasiRencana : 0);
+
+        $biayaAktualTerpakai = min((float) $latestTrx->harga_film, round($durasiAktual * $tarifPerMenit));
+
+        // Syarat 2: Kasir memilih film pengganti dari daftar film yang aktif dan tersedia
+        $availableFilms = Film::where('status', 'tersedia')
+            ->where('id', '!=', $latestTrx->film_id)
+            ->orderBy('judul', 'asc')
+            ->get()
+            ->map(function ($f) {
+                $activeCount = $f->getActiveRoomsCount();
+                $limit = max(1, (int) ($f->limit_penggunaan ?? 1));
+                $isLimitFull = $activeCount >= $limit;
+
+                $harga = (float) $f->total_harga > 0 
+                    ? (float) $f->total_harga 
+                    : ((float) $f->harga_per_menit * (int) $f->durasi_menit);
+
+                return [
+                    'id' => $f->id,
+                    'judul' => $f->judul,
+                    'durasi_menit' => (int) $f->durasi_menit,
+                    'durasi_formatted' => $f->durasi_formatted,
+                    'harga' => $harga,
+                    'harga_format' => 'Rp ' . number_format($harga, 0, ',', '.'),
+                    'harga_per_menit' => (float) $f->harga_per_menit,
+                    'poster_url' => $f->poster_url,
+                    'limit_penggunaan' => $limit,
+                    'active_rooms_count' => $activeCount,
+                    'is_limit_full' => $isLimitFull,
+                ];
+            });
+
+        $tipePembayarans = TipePembayaran::orderBy('id', 'asc')->get();
+
+        return response()->json([
+            'status' => 'success',
+            'room' => [
+                'id' => $room->id,
+                'nama' => $room->nama,
+                'kapasitas' => $room->kapasitas,
+            ],
+            'transaksi' => [
+                'id' => $latestTrx->id,
+                'nomor_transaksi' => $latestTrx->nomor_transaksi,
+                'nama_pelanggan' => $latestTrx->nama_pelanggan,
+                'film_id' => $latestTrx->film_id,
+                'film_judul' => $currentFilm?->judul ?? 'Film Studio',
+                'film_durasi' => $durasiRencana,
+                'harga_film' => (float) $latestTrx->harga_film,
+                'total_bayar' => (float) $latestTrx->total_bayar,
+                'waktu_mulai' => $waktuMulai->translatedFormat('d F Y, H:i'),
+                'waktu_mulai_time' => $waktuMulai->format('H:i'),
+                'durasi_aktual_menit' => $durasiAktual,
+                'tarif_per_menit' => $tarifPerMenit,
+                'biaya_aktual_terpakai' => $biayaAktualTerpakai,
+                'tipe_pembayaran' => $latestTrx->tipePembayaran?->metode_pembayaran ?? 'TUNAI',
+            ],
+            'films' => $availableFilms,
+            'tipe_pembayarans' => $tipePembayarans,
+            'server_time' => $now->translatedFormat('d F Y, H:i:s') . ' WIB',
+        ]);
+    }
+
+    /**
+     * Hitung biaya dan selisih harga pergantian film (Rule 3).
+     */
+    public function kalkulasiGantiFilm(Request $request)
+    {
+        $validated = $request->validate([
+            'transaksi_id' => 'required|exists:transaksis,id',
+            'film_baru_id' => 'required|exists:films,id',
+        ]);
+
+        $transaksi = Transaksi::with(['film', 'room'])->findOrFail($validated['transaksi_id']);
+        $now = Carbon::now();
+
+        $waktuMulai = $transaksi->waktu_mulai_film 
+            ? Carbon::parse($transaksi->waktu_mulai_film) 
+            : Carbon::parse($transaksi->waktu_transaksi);
+        $durasiRencana = (int) ($transaksi->durasi_menit ?: ($transaksi->film?->durasi_menit ?? 120));
+        $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+
+        if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Penayangan film pada room ini sudah selesai atau tidak sedang berlangsung.',
+            ], 422);
+        }
+
+        $durasiAktual = max(1, (int) $waktuMulai->diffInMinutes($now));
+        $durasiAktual = min($durasiAktual, $durasiRencana);
+
+        $filmLama = $transaksi->film;
+        $tarifLama = (float) $filmLama?->harga_per_menit > 0 
+            ? (float) $filmLama->harga_per_menit 
+            : ((int) $durasiRencana > 0 ? (float) $transaksi->harga_film / $durasiRencana : 0);
+
+        // Biaya pemutaran aktual film lama
+        $biayaFilmSebelumnya = min((float) $transaksi->harga_film, round($durasiAktual * $tarifLama));
+
+        // Biaya film pengganti
+        $filmBaru = Film::findOrFail($validated['film_baru_id']);
+        $hargaFilmBaru = (float) $filmBaru->total_harga > 0 
+            ? (float) $filmBaru->total_harga 
+            : ((float) $filmBaru->harga_per_menit * (int) $filmBaru->durasi_menit);
+
+        // Total biaya film final = Biaya film lama yang terpakai + Biaya penuh film baru
+        $biayaFilmFinal = $biayaFilmSebelumnya + $hargaFilmBaru;
+
+        // Selisih terhadap harga film awal yang telah dibayarkan
+        $selisih = $biayaFilmFinal - (float) $transaksi->harga_film;
+
+        if ($selisih > 0) {
+            $tipeSelisih = 'tambahan';
+            $labelSelisih = 'Pelanggan Perlu Membayar Tambahan';
+        } elseif ($selisih < 0) {
+            $tipeSelisih = 'refund';
+            $labelSelisih = 'Pengembalian Dana ke Pelanggan (Refund)';
+        } else {
+            $tipeSelisih = 'pas';
+            $labelSelisih = 'Biaya Pas / Tidak Ada Selisih';
+        }
+
+        $totalBayarLama = (float) $transaksi->total_bayar;
+        $subtotalFilmRoomBaru = $biayaFilmFinal + (float) $transaksi->harga_room + (float) $transaksi->denda_penonton;
+        $totalBayarBaru = max(0, $subtotalFilmRoomBaru + (float) $transaksi->subtotal_cafe - (float) $transaksi->diskon);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'film_lama' => [
+                    'id' => $filmLama?->id,
+                    'judul' => $filmLama?->judul ?? 'Film Lama',
+                    'durasi_menit' => $durasiRencana,
+                    'waktu_mulai' => $waktuMulai->format('H:i') . ' WIB',
+                    'durasi_aktual_menit' => $durasiAktual,
+                    'tarif_per_menit' => $tarifLama,
+                    'biaya_terpakai' => $biayaFilmSebelumnya,
+                    'biaya_terpakai_format' => 'Rp ' . number_format($biayaFilmSebelumnya, 0, ',', '.'),
+                    'harga_film_awal' => (float) $transaksi->harga_film,
+                    'harga_film_awal_format' => 'Rp ' . number_format($transaksi->harga_film, 0, ',', '.'),
+                ],
+                'film_baru' => [
+                    'id' => $filmBaru->id,
+                    'judul' => $filmBaru->judul,
+                    'durasi_menit' => (int) $filmBaru->durasi_menit,
+                    'durasi_formatted' => $filmBaru->durasi_formatted,
+                    'harga' => $hargaFilmBaru,
+                    'harga_format' => 'Rp ' . number_format($hargaFilmBaru, 0, ',', '.'),
+                    'poster_url' => $filmBaru->poster_url,
+                ],
+                'kalkulasi' => [
+                    'biaya_film_final' => $biayaFilmFinal,
+                    'biaya_film_final_format' => 'Rp ' . number_format($biayaFilmFinal, 0, ',', '.'),
+                    'selisih' => $selisih,
+                    'selisih_nominal' => abs($selisih),
+                    'selisih_format' => 'Rp ' . number_format(abs($selisih), 0, ',', '.'),
+                    'tipe_selisih' => $tipeSelisih,
+                    'label_selisih' => $labelSelisih,
+                    'total_bayar_lama' => $totalBayarLama,
+                    'total_bayar_lama_format' => 'Rp ' . number_format($totalBayarLama, 0, ',', '.'),
+                    'total_bayar_baru' => $totalBayarBaru,
+                    'total_bayar_baru_format' => 'Rp ' . number_format($totalBayarBaru, 0, ',', '.'),
+                ],
+                'server_time' => $now->translatedFormat('d F Y, H:i') . ' WIB',
+            ],
+        ]);
+    }
+
+    /**
+     * Konfirmasi & simpan pergantian film ke dalam transaksi yang sama (Rule 4, 5, 6).
+     */
+    public function simpanGantiFilm(Request $request)
+    {
+        $validated = $request->validate([
+            'transaksi_id' => 'required|exists:transaksis,id',
+            'film_baru_id' => 'required|exists:films,id',
+            'alasan_ganti' => 'nullable|string|max:255',
+            'tipe_pembayaran_tambahan_id' => 'nullable|exists:tipe_pembayarans,id',
+            'uang_diterima' => 'nullable|numeric|min:0',
+        ]);
+
+        return DB::transaction(function () use ($validated, $request) {
+            $transaksi = Transaksi::with(['film', 'room'])->findOrFail($validated['transaksi_id']);
+            $filmBaru = Film::findOrFail($validated['film_baru_id']);
+
+            if ($transaksi->film_id == $filmBaru->id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Film pengganti tidak boleh sama dengan film yang sedang diputar saat ini.',
+                ], 422);
+            }
+
+            // Validasi batas limit penggunaan film baru (Rule 2)
+            if (! $filmBaru->isAvailableForBooking()) {
+                $activeCount = $filmBaru->getActiveRoomsCount();
+                $limit = max(1, (int) ($filmBaru->limit_penggunaan ?? 1));
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Batas penggunaan film '{$filmBaru->judul}' sedang mencapai batas maksimal ({$activeCount}/{$limit} room aktif bersamaan). Silakan pilih film lain.",
+                ], 422);
+            }
+
+            $now = Carbon::now();
+            $waktuMulai = $transaksi->waktu_mulai_film 
+                ? Carbon::parse($transaksi->waktu_mulai_film) 
+                : Carbon::parse($transaksi->waktu_transaksi);
+            $durasiRencana = (int) ($transaksi->durasi_menit ?: ($transaksi->film?->durasi_menit ?? 120));
+            $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+
+            // Syarat 1: Hanya saat room sedang berlangsung
+            if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Pergantian film hanya dapat dilakukan ketika status room sedang berlangsung penayangan.',
+                ], 422);
+            }
+
+            // Durasi aktual pemutaran film lama
+            $durasiAktual = max(1, (int) $waktuMulai->diffInMinutes($now));
+            $durasiAktual = min($durasiAktual, $durasiRencana);
+
+            $filmLama = $transaksi->film;
+            $tarifLama = (float) $filmLama?->harga_per_menit > 0 
+                ? (float) $filmLama->harga_per_menit 
+                : ((int) $durasiRencana > 0 ? (float) $transaksi->harga_film / $durasiRencana : 0);
+
+            $biayaFilmSebelumnya = min((float) $transaksi->harga_film, round($durasiAktual * $tarifLama));
+
+            // Biaya film pengganti
+            $hargaFilmBaru = (float) $filmBaru->total_harga > 0 
+                ? (float) $filmBaru->total_harga 
+                : ((float) $filmBaru->harga_per_menit * (int) $filmBaru->durasi_menit);
+
+            $biayaFilmFinal = $biayaFilmSebelumnya + $hargaFilmBaru;
+            $selisih = $biayaFilmFinal - (float) $transaksi->harga_film;
+
+            $tipeSelisih = $selisih > 0 ? 'tambahan' : ($selisih < 0 ? 'refund' : 'pas');
+
+            // Syarat 4: Catat waktu secara otomatis & tutup riwayat film sebelumnya
+            $activeHistory = TransaksiFilmHistory::where('transaksi_id', $transaksi->id)
+                ->where('status', 'berjalan')
+                ->latest('id')
+                ->first();
+
+            if (! $activeHistory) {
+                // Buat record awal jika belum ada
+                TransaksiFilmHistory::create([
+                    'transaksi_id' => $transaksi->id,
+                    'film_id' => $transaksi->film_id,
+                    'room_id' => $transaksi->room_id,
+                    'judul_film' => $filmLama?->judul ?? 'Film Studio',
+                    'waktu_mulai' => $waktuMulai,
+                    'waktu_selesai' => $now,
+                    'durasi_menit_rencana' => $durasiRencana,
+                    'durasi_aktual_menit' => $durasiAktual,
+                    'tarif_per_menit' => $tarifLama,
+                    'biaya_film' => $biayaFilmSebelumnya,
+                    'status' => 'diganti',
+                    'alasan_ganti' => $validated['alasan_ganti'] ?? 'Ganti film oleh kasir',
+                    'selisih_biaya' => abs($selisih),
+                    'tipe_selisih' => $tipeSelisih,
+                ]);
+            } else {
+                $activeHistory->update([
+                    'waktu_selesai' => $now,
+                    'durasi_aktual_menit' => $durasiAktual,
+                    'biaya_film' => $biayaFilmSebelumnya,
+                    'status' => 'diganti',
+                    'alasan_ganti' => $validated['alasan_ganti'] ?? 'Ganti film oleh kasir',
+                    'selisih_biaya' => abs($selisih),
+                    'tipe_selisih' => $tipeSelisih,
+                ]);
+            }
+
+            // Buat riwayat pemutaran untuk film baru (Rule 4)
+            $tarifBaru = (float) $filmBaru->harga_per_menit > 0 
+                ? (float) $filmBaru->harga_per_menit 
+                : ((int) $filmBaru->durasi_menit > 0 ? (float) $hargaFilmBaru / (int) $filmBaru->durasi_menit : 0);
+
+            TransaksiFilmHistory::create([
+                'transaksi_id' => $transaksi->id,
+                'film_id' => $filmBaru->id,
+                'room_id' => $transaksi->room_id,
+                'judul_film' => $filmBaru->judul,
+                'waktu_mulai' => $now,
+                'waktu_selesai' => $now->copy()->addMinutes((int) $filmBaru->durasi_menit),
+                'durasi_menit_rencana' => (int) $filmBaru->durasi_menit,
+                'durasi_aktual_menit' => 0,
+                'tarif_per_menit' => $tarifBaru,
+                'biaya_film' => $hargaFilmBaru,
+                'status' => 'berjalan',
+                'selisih_biaya' => 0,
+                'tipe_selisih' => 'pas',
+            ]);
+
+            // Syarat 6: Simpan dalam transaksi yang sama
+            $transaksi->film_id = $filmBaru->id;
+            $transaksi->waktu_mulai_film = $now;
+            $transaksi->durasi_menit = (int) $filmBaru->durasi_menit;
+            $transaksi->harga_film = $biayaFilmFinal;
+            $transaksi->subtotal_film_room = $biayaFilmFinal + (float) $transaksi->harga_room + (float) $transaksi->denda_penonton;
+
+            $totalBayarBaru = max(0, $transaksi->subtotal_film_room + (float) $transaksi->subtotal_cafe - (float) $transaksi->diskon);
+            $transaksi->total_bayar = $totalBayarBaru;
+
+            if ($selisih > 0) {
+                $bayar = isset($validated['uang_diterima']) && (float) $validated['uang_diterima'] >= $selisih 
+                    ? (float) $validated['uang_diterima'] 
+                    : $selisih;
+                $transaksi->uang_diterima += $bayar;
+                if (!empty($validated['tipe_pembayaran_tambahan_id'])) {
+                    $transaksi->tipe_pembayaran_id = $validated['tipe_pembayaran_tambahan_id'];
+                }
+            } elseif ($selisih < 0) {
+                // Pengembalian dana ke pelanggan
+                $transaksi->kembalian += abs($selisih);
+            }
+
+            $logMsg = "\n[" . $now->translatedFormat('d/m/Y H:i:s') . "] Ganti film: '" . ($filmLama?->judul ?? 'Film Lama') . "' -> '{$filmBaru->judul}'. " .
+                "Putar film lama: {$durasiAktual} mnt (Rp " . number_format($biayaFilmSebelumnya, 0, ',', '.') . "), " .
+                "Film baru (Rp " . number_format($hargaFilmBaru, 0, ',', '.') . "). " .
+                "Selisih: " . ($selisih >= 0 ? '+' : '-') . "Rp " . number_format(abs($selisih), 0, ',', '.') . " (" . strtoupper($tipeSelisih) . "). " .
+                "Alasan: " . ($validated['alasan_ganti'] ?: '-');
+
+            $transaksi->catatan = trim(($transaksi->catatan ?? '') . $logMsg);
+            $transaksi->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Film berhasil diganti ke '{$filmBaru->judul}' pada transaksi #{$transaksi->nomor_transaksi}.",
+                'data' => [
+                    'transaksi_id' => $transaksi->id,
+                    'nomor_transaksi' => $transaksi->nomor_transaksi,
+                    'film_baru' => $filmBaru->judul,
+                    'durasi_menit' => $filmBaru->durasi_menit,
+                    'total_bayar' => $totalBayarBaru,
+                    'selisih' => $selisih,
+                    'tipe_selisih' => $tipeSelisih,
+                ],
+            ]);
+        });
     }
 }
