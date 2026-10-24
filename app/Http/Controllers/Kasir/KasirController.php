@@ -18,6 +18,7 @@ use App\Models\TokoCabang;
 use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
 use App\Models\TransaksiFilmHistory;
+use App\Models\TransaksiRoomHistory;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -974,4 +975,238 @@ class KasirController extends Controller
             ]);
         });
     }
+
+    /**
+     * Dapatkan data transaksi aktif pada room asal dan daftar room yang tersedia untuk dipindahkan (Move Room).
+     */
+    public function getAvailableRoomsForMove(Request $request, $roomId)
+    {
+        $room = Room::findOrFail($roomId);
+        $today = Carbon::today();
+        $now = Carbon::now();
+
+        // Cari transaksi aktif terakhir pada room ini hari ini
+        $latestTrx = Transaksi::with(['film', 'room', 'details.barang', 'details.satuanBarang', 'tipePembayaran'])
+            ->where('room_id', $roomId)
+            ->where('status', 'selesai')
+            ->whereDate('waktu_transaksi', $today)
+            ->latest('waktu_transaksi')
+            ->first();
+
+        if (! $latestTrx) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Tidak ditemukan transaksi aktif pada ruangan ini.',
+            ], 422);
+        }
+
+        $waktuMulai = $latestTrx->waktu_mulai_film 
+            ? Carbon::parse($latestTrx->waktu_mulai_film) 
+            : Carbon::parse($latestTrx->waktu_transaksi);
+        $durasiRencana = (int) ($latestTrx->durasi_menit ?: ($latestTrx->film?->durasi_menit ?? 120));
+        $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+
+        if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Penayangan pada ruangan ini sudah selesai atau tidak sedang berlangsung.',
+            ], 422);
+        }
+
+        $durasiBerjalan = max(0, (int) $waktuMulai->diffInMinutes($now));
+        $sisaMenit = max(0, (int) $now->diffInMinutes($waktuSelesai, false));
+
+        // Ambil daftar ID room yang sedang terpakai saat ini di cabang yang sama
+        $activeTrxs = Transaksi::where('toko_cabang_id', $latestTrx->toko_cabang_id)
+            ->where('status', 'selesai')
+            ->whereDate('waktu_transaksi', $today)
+            ->whereNotNull('room_id')
+            ->get();
+
+        $occupiedRoomIds = [];
+        foreach ($activeTrxs as $trx) {
+            $start = $trx->waktu_mulai_film ? Carbon::parse($trx->waktu_mulai_film) : Carbon::parse($trx->waktu_transaksi);
+            $duration = (int) ($trx->durasi_menit ?: ($trx->film?->durasi_menit ?? 120));
+            $end = $start->copy()->addMinutes($duration);
+            if ($now->greaterThanOrEqualTo($start) && $now->lessThan($end)) {
+                $occupiedRoomIds[] = $trx->room_id;
+            }
+        }
+
+        // Ambil room di cabang yang sama selain room asal dan yang sedang tidak terpakai
+        $availableRooms = Room::where('toko_cabang_id', $latestTrx->toko_cabang_id)
+            ->where('id', '!=', $room->id)
+            ->whereNotIn('id', $occupiedRoomIds)
+            ->orderBy('nama', 'asc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'room_asal' => [
+                'id' => $room->id,
+                'nama' => $room->nama,
+                'kapasitas' => $room->kapasitas,
+            ],
+            'transaksi' => [
+                'id' => $latestTrx->id,
+                'nomor_transaksi' => $latestTrx->nomor_transaksi,
+                'nama_pelanggan' => $latestTrx->nama_pelanggan,
+                'film_judul' => $latestTrx->film?->judul ?? 'Film Studio',
+                'film_poster' => $latestTrx->film?->poster_url,
+                'waktu_mulai' => $waktuMulai->format('H:i') . ' WIB',
+                'waktu_selesai' => $waktuSelesai->format('H:i') . ' WIB',
+                'durasi_total_menit' => $durasiRencana,
+                'durasi_berjalan_menit' => $durasiBerjalan,
+                'sisa_menit' => $sisaMenit,
+                'sisa_waktu_teks' => KasirDashboardController::formatSisaWaktu($sisaMenit),
+                'cafe_items_count' => $latestTrx->details->count(),
+                'subtotal_cafe' => (float) $latestTrx->subtotal_cafe,
+                'total_bayar' => (float) $latestTrx->total_bayar,
+            ],
+            'available_rooms' => $availableRooms->map(function ($r) {
+                return [
+                    'id' => $r->id,
+                    'nama' => $r->nama,
+                    'kapasitas' => $r->kapasitas,
+                ];
+            }),
+            'server_time' => $now->translatedFormat('d F Y, H:i') . ' WIB',
+        ]);
+    }
+
+    /**
+     * Proses pemindahan ruangan (Move Room) dengan mempertahankan waktu mulai, durasi berjalan,
+     * film, dan pesanan kafe (Aturan 1 - 7).
+     */
+    public function moveRoom(Request $request)
+    {
+        $validated = $request->validate([
+            'transaksi_id' => 'required|exists:transaksis,id',
+            'room_tujuan_id' => 'required|exists:rooms,id',
+            'alasan_pindah' => 'nullable|string|max:255',
+        ]);
+
+        return DB::transaction(function () use ($validated) {
+            $transaksi = Transaksi::with(['film', 'room', 'details'])->lockForUpdate()->findOrFail($validated['transaksi_id']);
+            $newRoom = Room::findOrFail($validated['room_tujuan_id']);
+            $oldRoom = $transaksi->room;
+
+            if (! $oldRoom) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Transaksi ini tidak memiliki ruangan asal.',
+                ], 422);
+            }
+
+            if ($transaksi->room_id == $newRoom->id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Ruangan tujuan tidak boleh sama dengan ruangan asal.',
+                ], 422);
+            }
+
+            if ($newRoom->toko_cabang_id != $transaksi->toko_cabang_id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Ruangan tujuan harus berada pada outlet cabang yang sama.',
+                ], 422);
+            }
+
+            $now = Carbon::now();
+            $today = Carbon::today();
+
+            $waktuMulai = $transaksi->waktu_mulai_film 
+                ? Carbon::parse($transaksi->waktu_mulai_film) 
+                : Carbon::parse($transaksi->waktu_transaksi);
+            $durasiRencana = (int) ($transaksi->durasi_menit ?: ($transaksi->film?->durasi_menit ?? 120));
+            $waktuSelesai = $waktuMulai->copy()->addMinutes($durasiRencana);
+
+            // Syarat: Penayangan sedang berlangsung
+            if (! ($now->greaterThanOrEqualTo($waktuMulai) && $now->lessThan($waktuSelesai))) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Perpindahan ruangan hanya dapat dilakukan ketika penayangan sedang berlangsung.',
+                ], 422);
+            }
+
+            // Periksa apakah ruangan tujuan sedang terpakai oleh transaksi lain yang aktif
+            $targetTrx = Transaksi::where('room_id', $newRoom->id)
+                ->where('id', '!=', $transaksi->id)
+                ->where('status', 'selesai')
+                ->whereDate('waktu_transaksi', $today)
+                ->latest('waktu_transaksi')
+                ->first();
+
+            if ($targetTrx) {
+                $targetMulai = $targetTrx->waktu_mulai_film 
+                    ? Carbon::parse($targetTrx->waktu_mulai_film) 
+                    : Carbon::parse($targetTrx->waktu_transaksi);
+                $targetDurasi = (int) ($targetTrx->durasi_menit ?: ($targetTrx->film?->durasi_menit ?? 120));
+                $targetSelesai = $targetMulai->copy()->addMinutes($targetDurasi);
+
+                if ($now->greaterThanOrEqualTo($targetMulai) && $now->lessThan($targetSelesai)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Ruangan {$newRoom->nama} saat ini sedang terpakai dan tidak dapat dipilih.",
+                    ], 422);
+                }
+            }
+
+            // Hitung durasi yang telah berjalan dan sisa durasi saat perpindahan
+            $durasiBerjalan = max(0, (int) $waktuMulai->diffInMinutes($now));
+            $sisaMenit = max(0, (int) $now->diffInMinutes($waktuSelesai, false));
+
+            $user = Auth::user();
+            $namaUser = $user?->name ?? $user?->username ?? 'Kasir';
+
+            // Catat riwayat perpindahan ruangan ke database (Aturan 7)
+            $history = TransaksiRoomHistory::create([
+                'transaksi_id' => $transaksi->id,
+                'room_asal_id' => $oldRoom->id,
+                'room_tujuan_id' => $newRoom->id,
+                'nama_room_asal' => $oldRoom->nama,
+                'nama_room_tujuan' => $newRoom->nama,
+                'user_id' => $user?->id ?? $transaksi->user_id,
+                'nama_user' => $namaUser,
+                'waktu_pindah' => $now,
+                'durasi_berjalan_menit' => $durasiBerjalan,
+                'sisa_durasi_menit' => $sisaMenit,
+                'alasan_pindah' => $validated['alasan_pindah'] ?? null,
+            ]);
+
+            // Jika ada riwayat pemutaran film berjalan, sinkronkan room_id-nya ke room baru
+            TransaksiFilmHistory::where('transaksi_id', $transaksi->id)
+                ->where('status', 'berjalan')
+                ->update(['room_id' => $newRoom->id]);
+
+            // Pindahkan transaksi ke ruangan baru:
+            // 1. Waktu mulai transaksi TETAP (waktu_transaksi & waktu_mulai_film tidak diubah)
+            // 2. Durasi berjalan TETAP dihitung (waktu_mulai dan durasi_menit tidak diubah)
+            // 3. Film yang diputar TETAP film yang dipesan (film_id tidak diubah)
+            // 4. Pesanan kafe TETAP tersimpan (details & subtotal_cafe tidak diubah)
+            // 5. Ruangan asal menjadi tersedia & ruangan tujuan menjadi terisi (room_id berpindah)
+            $transaksi->room_id = $newRoom->id;
+
+            $alasanText = !empty($validated['alasan_pindah']) ? " (Alasan: {$validated['alasan_pindah']})" : '';
+            $logMsg = "\n[" . $now->translatedFormat('d/m/Y H:i:s') . "] Pindah room: '{$oldRoom->nama}' -> '{$newRoom->nama}'. " .
+                "Durasi berjalan: {$durasiBerjalan} mnt, Sisa: {$sisaMenit} mnt. Petugas: {$namaUser}{$alasanText}.";
+            $transaksi->catatan = trim(($transaksi->catatan ?? '') . $logMsg);
+            $transaksi->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Berhasil memindahkan penayangan dari {$oldRoom->nama} ke {$newRoom->nama}.",
+                'data' => [
+                    'transaksi_id' => $transaksi->id,
+                    'nomor_transaksi' => $transaksi->nomor_transaksi,
+                    'room_asal' => $oldRoom->nama,
+                    'room_tujuan' => $newRoom->nama,
+                    'durasi_berjalan_menit' => $durasiBerjalan,
+                    'sisa_menit' => $sisaMenit,
+                    'history_id' => $history->id,
+                ],
+            ]);
+        });
+    }
 }
+

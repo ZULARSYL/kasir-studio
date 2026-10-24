@@ -472,6 +472,14 @@
                                                         {{ $isOccupied ? 'Sedang Digunakan' : 'Siap Digunakan' }}
                                                     </strong>
                                                     @if($isOccupied)
+                                                        <button type="button" 
+                                                           class="btn btn-sm btn-info text-white fw-bold rounded-pill px-2.5 py-0.5 shadow-sm btn-open-move-room"
+                                                           style="font-size: 0.72rem; z-index: 5;"
+                                                           data-room-id="{{ $room->id }}"
+                                                           data-room-nama="{{ $room->nama }}"
+                                                           title="Pindah Room / Perpindahan Ruangan">
+                                                            <i class="bi bi-arrow-left-right"></i> Pindah Room
+                                                        </button>
                                                         <a href="{{ route('kasir.kasir', ['mode' => 'ganti_film', 'room_id' => $room->id]) }}" 
                                                            class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-2.5 py-0.5 shadow-sm"
                                                            style="font-size: 0.72rem; z-index: 5;"
@@ -1157,6 +1165,7 @@
     @endif
 
 </div>
+@include('kasir.partials.modal-move-room')
 @endsection
 
 @section('styles')
