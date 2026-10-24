@@ -82,7 +82,11 @@ class RiwayatPenjualanController extends Controller
             'promo',
             'details.barang',
             'details.satuanBarang',
-            'kasirShift'
+            'kasirShift',
+            'filmHistories',
+            'roomHistories.roomAsal',
+            'roomHistories.roomTujuan',
+            'roomHistories.user',
         ])->findOrFail($id);
 
         return response()->json([

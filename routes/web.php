@@ -214,4 +214,8 @@ Route::middleware(['auth', 'role:admin,kasir'])
         Route::get('/ganti-film/{roomId}', [KasirController::class, 'getGantiFilmData'])->name('ganti-film.data');
         Route::post('/ganti-film/kalkulasi', [KasirController::class, 'kalkulasiGantiFilm'])->name('ganti-film.kalkulasi');
         Route::post('/ganti-film/simpan', [KasirController::class, 'simpanGantiFilm'])->name('ganti-film.simpan');
+
+        // Fitur Pindah Room (Move Room)
+        Route::get('/move-room/rooms/{roomId}', [KasirController::class, 'getAvailableRoomsForMove'])->name('move-room.rooms');
+        Route::post('/move-room', [KasirController::class, 'moveRoom'])->name('move-room.save');
     });

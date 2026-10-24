@@ -304,6 +304,21 @@
                     </div>
                 </div>
 
+                <!-- Bagian Riwayat Perpindahan Room (Move Room) -->
+                <div class="card border-0 shadow-sm rounded-4 mb-3" id="cardRoomHistoryDetail" style="display: none;">
+                    <div class="card-header bg-white border-0 py-2 px-3 fw-bold small text-muted text-uppercase d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-arrow-left-right me-1 text-info"></i> Riwayat Perpindahan Ruangan (Move Room)
+                        </div>
+                        <span class="badge bg-info-subtle text-info rounded-pill px-2.5 py-0.5 small" id="dtRoomHistoryBadge">0x Pindah</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush small" id="dtRoomHistoryList">
+                            <!-- Injected via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Bagian Item Cafe -->
                 <div class="card border-0 shadow-sm rounded-4 mb-3" id="cardCafeDetail">
                     <div class="card-header bg-white border-0 py-2 px-3 fw-bold small text-muted text-uppercase">
@@ -390,10 +405,44 @@
                     if (trx.film) {
                         document.getElementById('cardStudioDetail').style.display = 'block';
                         document.getElementById('dtFilmJudul').innerText = trx.film.judul;
-                        document.getElementById('dtFilmDetail').innerText = (trx.room ? trx.room.nama_room : 'Studio') + ' | Durasi: ' + trx.durasi_menit + ' menit';
+                        document.getElementById('dtFilmDetail').innerText = (trx.room ? (trx.room.nama || trx.room.nama_room) : 'Studio') + ' | Durasi: ' + trx.durasi_menit + ' menit';
                         document.getElementById('dtFilmSubtotal').innerText = 'Rp ' + Number(trx.subtotal_film_room).toLocaleString('id-ID');
                     } else {
                         document.getElementById('cardStudioDetail').style.display = 'none';
+                    }
+
+                    // Riwayat Perpindahan Room (Move Room)
+                    const roomHistoryCard = document.getElementById('cardRoomHistoryDetail');
+                    const roomHistoryList = document.getElementById('dtRoomHistoryList');
+                    const roomHistoryBadge = document.getElementById('dtRoomHistoryBadge');
+
+                    if (trx.room_histories && trx.room_histories.length > 0) {
+                        roomHistoryCard.style.display = 'block';
+                        roomHistoryBadge.innerText = trx.room_histories.length + 'x Pindah';
+                        let listHtml = '';
+                        trx.room_histories.forEach(hist => {
+                            const waktuPindah = hist.waktu_pindah ? new Date(hist.waktu_pindah).toLocaleString('id-ID') : '-';
+                            listHtml += `
+                                <div class="list-group-item p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <div class="fw-bold text-dark">
+                                            <span class="badge bg-secondary-subtle text-secondary me-1">${hist.nama_room_asal}</span>
+                                            <i class="bi bi-arrow-right text-info mx-1"></i>
+                                            <span class="badge bg-success-subtle text-success">${hist.nama_room_tujuan}</span>
+                                        </div>
+                                        <span class="text-muted font-monospace" style="font-size: 0.75rem;">${waktuPindah}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between text-muted" style="font-size: 0.78rem;">
+                                        <span>Durasi Berjalan: <strong>${hist.durasi_berjalan_menit} mnt</strong> &bull; Sisa: <strong>${hist.sisa_durasi_menit} mnt</strong></span>
+                                        <span>Petugas: <strong>${hist.nama_user || (hist.user ? (hist.user.name || hist.user.username) : 'Kasir')}</strong></span>
+                                    </div>
+                                    ${hist.alasan_pindah ? `<div class="mt-1 small text-secondary fst-italic"><i class="bi bi-chat-left-dots me-1"></i>${hist.alasan_pindah}</div>` : ''}
+                                </div>
+                            `;
+                        });
+                        roomHistoryList.innerHTML = listHtml;
+                    } else {
+                        roomHistoryCard.style.display = 'none';
                     }
 
                     // Cafe Items Card

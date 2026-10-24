@@ -147,7 +147,7 @@ class KasirDashboardController extends Controller
             ->get();
 
         // Response JSON jika diminta melalui AJAX (untuk live countdown & update status)
-        if ($request->ajax() && $request->get('mode') === 'rooms_status') {
+        if (($request->ajax() || $request->wantsJson()) && $request->get('mode') === 'rooms_status') {
             return response()->json([
                 'total_room_terpakai' => $totalRoomTerpakai,
                 'total_room_tersedia' => $totalRoomTersedia,

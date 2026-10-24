@@ -102,6 +102,11 @@ class Transaksi extends Model
         return $this->hasMany(TransaksiDetail::class, 'transaksi_id');
     }
 
+    public function roomHistories(): HasMany
+    {
+        return $this->hasMany(TransaksiRoomHistory::class, 'transaksi_id')->orderBy('waktu_pindah', 'desc');
+    }
+
     /**
      * Generate format nomor transaksi otomatis: TRX-YYYYMMDD-XXXX
      */

@@ -255,12 +255,22 @@
                             <!-- Card Footer Action -->
                             <div class="mt-auto pt-2 d-flex justify-content-between align-items-center gap-2">
                                 @if($room->is_occupied)
-                                    <a href="{{ route('kasir.kasir', ['mode' => 'ganti_film', 'room_id' => $room->id]) }}" 
-                                       class="btn btn-sm btn-warning text-dark fw-bold rounded-3 px-3 py-1.5 d-flex align-items-center gap-1.5 shadow-sm"
-                                       title="Ganti Film yang sedang ditayangkan pada room ini">
-                                        <i class="bi bi-arrow-repeat fs-6"></i>
-                                        <span>Ganti Film</span>
-                                    </a>
+                                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                        <button type="button" 
+                                           class="btn btn-sm btn-info text-white fw-bold rounded-3 px-2.5 py-1.5 d-flex align-items-center gap-1 shadow-sm btn-open-move-room"
+                                           data-room-id="{{ $room->id }}"
+                                           data-room-nama="{{ $room->nama }}"
+                                           title="Pindah ke room lain yang tersedia">
+                                            <i class="bi bi-arrow-left-right fs-6"></i>
+                                            <span>Pindah Room</span>
+                                        </button>
+                                        <a href="{{ route('kasir.kasir', ['mode' => 'ganti_film', 'room_id' => $room->id]) }}" 
+                                           class="btn btn-sm btn-warning text-dark fw-bold rounded-3 px-2.5 py-1.5 d-flex align-items-center gap-1 shadow-sm"
+                                           title="Ganti Film yang sedang ditayangkan pada room ini">
+                                            <i class="bi bi-arrow-repeat fs-6"></i>
+                                            <span>Ganti Film</span>
+                                        </a>
+                                    </div>
                                 @else
                                     <div></div>
                                 @endif
@@ -405,6 +415,7 @@
     </div>
 
 </div>
+@include('kasir.partials.modal-move-room')
 @endsection
 
 @section('styles')
