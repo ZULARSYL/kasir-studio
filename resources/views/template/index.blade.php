@@ -14,7 +14,10 @@
 
     <!-- Bootstrap 5.3.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons (Diaktifkan kembali dengan menghapus tanda komentar) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Font Awesome (Opsional, hapus jika tidak digunakan) -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
 
     <style>
@@ -46,7 +49,51 @@
             --border-color: #1e293b;
             --brand-primary-light: rgba(0, 123, 139, 0.18);
             --brand-primary-soft: rgba(0, 123, 139, 0.2);
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        }
+
+        /* Custom Cafe Icons & Aliases (Fork knife & Cookie) */
+        .bi-fork-knife::before,
+        .fa-fork-knife::before {
+            content: "\f2e7";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+        .bi-cookie::before {
+            content: "\f563";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+        }
+
+        /* Clean Bootstrap 5 Pagination Styling (Matching Invenza Theme) */
+        .pagination {
+            gap: 4px;
+            margin-bottom: 0;
+        }
+        .pagination .page-item .page-link {
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            color: var(--text-body);
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.75rem;
+            transition: all 0.2s ease;
+            background-color: var(--bg-card);
+        }
+        .pagination .page-item.active .page-link {
+            background-color: var(--brand-primary);
+            border-color: var(--brand-primary);
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 123, 139, 0.25);
+        }
+        .pagination .page-item.disabled .page-link {
+            opacity: 0.5;
+            background-color: transparent;
+            border-color: var(--border-color);
+        }
+        .pagination .page-item .page-link:hover:not(.disabled):not(.active) {
+            background-color: var(--brand-primary-soft);
+            color: var(--brand-primary);
+            border-color: var(--brand-primary);
         }
 
         * {

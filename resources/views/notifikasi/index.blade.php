@@ -165,6 +165,17 @@
         @endforelse
     </div>
 
+    @if($items->hasPages())
+        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
+            <div class="small text-muted font-monospace">
+                Menampilkan {{ $items->firstItem() ?? 0 }} - {{ $items->lastItem() ?? 0 }} dari {{ $items->total() }} Notifikasi
+            </div>
+            <div>
+                {{ $items->links() }}
+            </div>
+        </div>
+    @endif
+
 </div>
 @endsection
 

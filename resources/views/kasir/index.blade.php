@@ -283,7 +283,7 @@
                                        class="btn btn-sm btn-outline-primary rounded-3 fw-semibold d-flex align-items-center gap-1 room-card-action"
                                        title="Tambah pesanan makanan atau minuman cafe untuk room ini">
                                         <i class="bi bi-cup-straw"></i>
-                                        <span>Pesanan Baru</span>
+                                        <span>Buat Pesanan Baru</span>
                                     </a>
                                 @else
                                     <a href="{{ route('kasir.kasir') }}" class="btn btn-sm btn-emerald text-white rounded-3 fw-semibold d-flex align-items-center gap-1 room-card-action room-card-action-primary">
@@ -324,7 +324,7 @@
                 </div>
             </div>
             <div class="col-12 col-md-6 col-lg-8 text-md-end text-muted small">
-                <span>Menampilkan <strong>{{ $riwayatPembelianToday->count() }}</strong> riwayat pembelian transaksi hari ini.</span>
+                <span>Menampilkan <strong>{{ $riwayatPembelianToday->firstItem() ?? 0 }} - {{ $riwayatPembelianToday->lastItem() ?? 0 }}</strong> dari <strong>{{ $riwayatPembelianToday->total() }}</strong> riwayat pembelian transaksi hari ini.</span>
             </div>
         </div>
 
@@ -347,7 +347,7 @@
                 <tbody>
                     @forelse($riwayatPembelianToday as $index => $trx)
                         <tr class="riwayat-row">
-                            <td class="ps-3 fw-semibold text-muted">{{ $index + 1 }}</td>
+                            <td class="ps-3 fw-semibold text-muted">{{ $riwayatPembelianToday->firstItem() + $index }}</td>
                             <td>
                                 <span class="fw-bold font-monospace text-heading">{{ $trx->nomor_transaksi }}</span>
                             </td>
@@ -425,6 +425,17 @@
                 @endif
             </table>
         </div>
+
+        @if($riwayatPembelianToday->hasPages())
+            <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="small text-muted">
+                    Halaman <strong>{{ $riwayatPembelianToday->currentPage() }}</strong> dari <strong>{{ $riwayatPembelianToday->lastPage() }}</strong>
+                </div>
+                <div>
+                    {{ $riwayatPembelianToday->links() }}
+                </div>
+            </div>
+        @endif
     </div>
 
 </div>

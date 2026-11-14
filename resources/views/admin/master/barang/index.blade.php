@@ -103,8 +103,12 @@
                             </td>
                             <td>
                                 @if($item->menuCafe)
-                                    <span class="badge bg-light text-dark border px-2.5 py-1">
-                                        {{ $item->menuCafe->nama }}
+                                    @php
+                                        $catIcon = \App\Models\MenuCafe::getIconForCategory($item->menuCafe->nama);
+                                        $catColor = \App\Models\MenuCafe::getBadgeColorForCategory($item->menuCafe->nama);
+                                    @endphp
+                                    <span class="badge bg-{{ $catColor }}-subtle text-{{ $catColor }} border border-{{ $catColor }}-subtle px-2.5 py-1">
+                                        <i class="{{ $catIcon }} me-1"></i>{{ $item->menuCafe->nama }}
                                     </span>
                                 @else
                                     <span class="text-muted small fst-italic">-</span>

@@ -68,7 +68,14 @@
                         <tr>
                             <td class="ps-4 fw-semibold text-muted">{{ $items->firstItem() + $index }}</td>
                             <td>
+                                @php
+                                    $catIcon = \App\Models\MenuCafe::getIconForCategory($item->nama);
+                                    $catColor = \App\Models\MenuCafe::getBadgeColorForCategory($item->nama);
+                                @endphp
                                 <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-{{ $catColor }}-subtle text-{{ $catColor }} border border-{{ $catColor }}-subtle rounded-3 p-2 d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                                        <i class="{{ $catIcon }} fs-6"></i>
+                                    </span>
                                     <div class="fw-bold text-heading fs-6">{{ $item->nama }}</div>
                                 </div>
                             </td>

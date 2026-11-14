@@ -48,8 +48,8 @@ class ShiftController extends Controller
         $shiftHandovers = KasirShift::with(['user', 'tokoCabang', 'shift', 'previousShift.user'])
             ->whereDate('waktu_buka', '>=', Carbon::today()->subDays(2))
             ->latest('waktu_buka')
-            ->take(15)
-            ->get();
+            ->paginate(10, ['*'], 'riwayat_page')
+            ->withQueryString();
 
         $cabangs = TokoCabang::orderBy('nama_cabang')->get();
 
