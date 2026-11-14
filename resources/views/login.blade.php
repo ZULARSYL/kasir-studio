@@ -212,9 +212,9 @@
                         </button>
 
                         <div class="text-center pt-2 border-top">
-                            <p class="text-muted small mb-0">
-                                Gunakan akun yang telah disediakan oleh administrator.
-                            </p>
+                            <small class="text-muted">
+                                untuk demo silahkan login dengan <br> <span class="text-danger fw-bold">username: owner</span>  <br>  <span class="text-danger fw-bold">password: 12345678</span>
+                            </small>
                         </div>
                     </form>
                 </div>
