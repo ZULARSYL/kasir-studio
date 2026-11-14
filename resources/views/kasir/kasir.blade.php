@@ -554,6 +554,18 @@
                                     </div>
                                 @endforelse
                             </div>
+
+                            <!-- Movie Grid Pagination Bar -->
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-2" id="moviePaginationBar" style="display: none;">
+                                <div class="small text-muted font-monospace" id="moviePaginationInfo">
+                                    Menampilkan 1 - 9 dari 9 Film
+                                </div>
+                                <nav aria-label="Movie pagination">
+                                    <ul class="pagination pagination-sm mb-0" id="moviePaginationList">
+                                        <!-- Rendered by JS -->
+                                    </ul>
+                                </nav>
+                            </div>
                         </div>
 
                     </div>
@@ -688,10 +700,15 @@
 
                             <!-- Category Pills -->
                             <div class="py-2 border-top border-bottom mb-3 d-flex gap-2 overflow-x-auto">
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill active btn-cafe-cat" data-category="all">Semua Menu</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill active btn-cafe-cat" data-category="all">
+                                    <i class="bi bi-grid-fill me-1"></i>Semua Menu
+                                </button>
                                 @foreach($kategoriCafes as $kategori)
+                                    @php
+                                        $catIcon = \App\Models\MenuCafe::getIconForCategory($kategori->nama);
+                                    @endphp
                                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-cafe-cat text-nowrap" data-category="{{ $kategori->nama }}">
-                                        {{ $kategori->nama }}
+                                        <i class="{{ $catIcon }} me-1"></i>{{ $kategori->nama }}
                                     </button>
                                 @endforeach
                             </div>
@@ -702,13 +719,15 @@
                                     @php
                                         $stokTersedia = (float) $cItem->stok;
                                         $hargaJual = (float) $cItem->harga_jual;
+                                        $catIcon = \App\Models\MenuCafe::getIconForCategory($cItem->nama_kategori);
+                                        $catColor = \App\Models\MenuCafe::getBadgeColorForCategory($cItem->nama_kategori);
                                     @endphp
                                     <div class="col cafe-item-wrapper" data-category="{{ $cItem->nama_kategori }}" data-name="{{ strtolower($cItem->nama_barang) }}">
                                         <div class="pos-product-card card h-100 bg-white rounded-4 p-3 transition-all cafe-card border position-relative">
                                             <div class="pos-thumb-box rounded-3 overflow-hidden position-relative mb-2 bg-light d-flex align-items-center justify-content-center" style="aspect-ratio: 1/1;">
-                                                <i class="bi bi-cup-straw fs-1 text-emerald opacity-75"></i>
-                                                <span class="badge bg-light text-muted border position-absolute top-0 start-0 m-2 small">
-                                                    {{ $cItem->nama_kategori ?? 'Umum' }}
+                                                <i class="{{ $catIcon }} fs-1 text-{{ $catColor }} opacity-75"></i>
+                                                <span class="badge bg-light text-dark border position-absolute top-0 start-0 m-2 small">
+                                                    <i class="{{ $catIcon }} me-1 text-{{ $catColor }}"></i>{{ $cItem->nama_kategori ?? 'Umum' }}
                                                 </span>
                                             </div>
 
@@ -742,6 +761,18 @@
                                         Belum ada stok menu cafe di cabang ini. Silakan input faktur barang terlebih dahulu.
                                     </div>
                                 @endforelse
+                            </div>
+
+                            <!-- Cafe Grid Pagination Bar -->
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-2" id="cafePaginationBar" style="display: none;">
+                                <div class="small text-muted font-monospace" id="cafePaginationInfo">
+                                    Menampilkan 1 - 12 dari 12 Menu Cafe
+                                </div>
+                                <nav aria-label="Cafe pagination">
+                                    <ul class="pagination pagination-sm mb-0" id="cafePaginationList">
+                                        <!-- Rendered by JS -->
+                                    </ul>
+                                </nav>
                             </div>
                         </div>
                     </div>
@@ -1938,34 +1969,119 @@ document.addEventListener('DOMContentLoaded', function () {
     // STEP 1: PENCARIAN & FILTER KATEGORI FILM (MIRIP KASIR.PNG)
     // -------------------------------------------------------------
     const selectGenreFilter = document.getElementById('selectGenreFilter');
+    let movieCurrentPage = 1;
+    const MOVIES_PER_PAGE = 9;
+    let matchedMovieWrappers = [];
 
-    function applyMovieFilters() {
+    function renderMoviePagination() {
+        const totalItems = matchedMovieWrappers.length;
+        const totalPages = Math.ceil(totalItems / MOVIES_PER_PAGE) || 1;
+
+        if (movieCurrentPage > totalPages) {
+            movieCurrentPage = totalPages;
+        }
+        if (movieCurrentPage < 1) {
+            movieCurrentPage = 1;
+        }
+
+        const startIndex = (movieCurrentPage - 1) * MOVIES_PER_PAGE;
+        const endIndex = Math.min(startIndex + MOVIES_PER_PAGE, totalItems);
+
+        // Sembunyikan semua terlebih dahulu
+        document.querySelectorAll('.movie-card-wrapper').forEach(item => {
+            item.style.display = 'none';
+        });
+
+        // Tampilkan hanya item pada halaman aktif saat ini
+        for (let i = startIndex; i < endIndex; i++) {
+            if (matchedMovieWrappers[i]) {
+                matchedMovieWrappers[i].style.display = '';
+            }
+        }
+
+        const counterBadge = document.getElementById('movieCounterBadge');
+        if (counterBadge) {
+            counterBadge.textContent = `${totalItems} Film`;
+        }
+
+        const moviePaginationBar = document.getElementById('moviePaginationBar');
+        const moviePaginationInfo = document.getElementById('moviePaginationInfo');
+        const moviePaginationList = document.getElementById('moviePaginationList');
+
+        if (moviePaginationBar && moviePaginationInfo && moviePaginationList) {
+            if (totalItems > MOVIES_PER_PAGE) {
+                moviePaginationBar.style.display = 'flex';
+                moviePaginationInfo.textContent = `Menampilkan ${totalItems > 0 ? startIndex + 1 : 0} - ${endIndex} dari ${totalItems} Film`;
+
+                let html = '';
+                // Previous button
+                html += `<li class="page-item ${movieCurrentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToMoviePage(${movieCurrentPage - 1})" aria-label="Previous">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>`;
+
+                for (let p = 1; p <= totalPages; p++) {
+                    if (p === 1 || p === totalPages || (p >= movieCurrentPage - 1 && p <= movieCurrentPage + 1)) {
+                        html += `<li class="page-item ${p === movieCurrentPage ? 'active' : ''}">
+                            <a class="page-link" href="javascript:void(0)" onclick="goToMoviePage(${p})">${p}</a>
+                        </li>`;
+                    } else if (p === movieCurrentPage - 2 || p === movieCurrentPage + 2) {
+                        html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    }
+                }
+
+                // Next button
+                html += `<li class="page-item ${movieCurrentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToMoviePage(${movieCurrentPage + 1})" aria-label="Next">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>`;
+
+                moviePaginationList.innerHTML = html;
+            } else {
+                moviePaginationBar.style.display = 'none';
+            }
+        }
+    }
+
+    window.goToMoviePage = function(page) {
+        movieCurrentPage = page;
+        renderMoviePagination();
+        const movieSection = document.getElementById('movieGrid');
+        if (movieSection) {
+            movieSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    };
+
+    function applyMovieFilters(resetPage = true) {
+        if (resetPage) {
+            movieCurrentPage = 1;
+        }
         const query = (searchMovieInput ? searchMovieInput.value : '').toLowerCase().trim();
         const genre = selectGenreFilter ? selectGenreFilter.value : 'all';
 
-        let count = 0;
+        matchedMovieWrappers = [];
         document.querySelectorAll('.movie-card-wrapper').forEach(item => {
-            const title = item.getAttribute('data-title') || '';
-            const sku = item.getAttribute('data-sku') || '';
-            const genres = item.getAttribute('data-genre') || '';
+            const title = (item.getAttribute('data-title') || '').toLowerCase();
+            const sku = (item.getAttribute('data-sku') || '').toLowerCase();
+            const genres = (item.getAttribute('data-genre') || '').toLowerCase();
 
             const matchQuery = !query || title.includes(query) || sku.includes(query);
-            const matchGenre = genre === 'all' || genres.includes(genre);
+            const matchGenre = genre === 'all' || genres.includes(genre.toLowerCase());
 
             if (matchQuery && matchGenre) {
-                item.style.display = '';
-                count++;
-            } else {
-                item.style.display = 'none';
+                matchedMovieWrappers.push(item);
             }
         });
 
-        const counterBadge = document.getElementById('movieCounterBadge');
-        if (counterBadge) counterBadge.textContent = `${count} Film`;
+        renderMoviePagination();
     }
 
     if (searchMovieInput) {
-        searchMovieInput.addEventListener('input', applyMovieFilters);
+        searchMovieInput.addEventListener('input', function() {
+            applyMovieFilters(true);
+        });
     }
 
     if (selectGenreFilter) {
@@ -1974,7 +2090,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.btn-genre-pill').forEach(btn => {
                 btn.classList.toggle('active', btn.getAttribute('data-genre') === this.value);
             });
-            applyMovieFilters();
+            applyMovieFilters(true);
         });
     }
 
@@ -1987,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (selectGenreFilter) {
                 selectGenreFilter.value = genre;
             }
-            applyMovieFilters();
+            applyMovieFilters(true);
         });
     });
 
@@ -2086,16 +2202,116 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // -------------------------------------------------------------
-    // STEP 3: PESAN MENU CAFE & SNACK
+    // STEP 3: PESAN MENU CAFE & SNACK (FILTER & PAGINATION)
     // -------------------------------------------------------------
     const searchCafeInput = document.getElementById('searchCafeInput');
+    let cafeCurrentPage = 1;
+    const CAFES_PER_PAGE = 12;
+    let matchedCafeWrappers = [];
+
+    function renderCafePagination() {
+        const totalItems = matchedCafeWrappers.length;
+        const totalPages = Math.ceil(totalItems / CAFES_PER_PAGE) || 1;
+
+        if (cafeCurrentPage > totalPages) {
+            cafeCurrentPage = totalPages;
+        }
+        if (cafeCurrentPage < 1) {
+            cafeCurrentPage = 1;
+        }
+
+        const startIndex = (cafeCurrentPage - 1) * CAFES_PER_PAGE;
+        const endIndex = Math.min(startIndex + CAFES_PER_PAGE, totalItems);
+
+        // Sembunyikan semua item cafe terlebih dahulu
+        document.querySelectorAll('.cafe-item-wrapper').forEach(item => {
+            item.style.display = 'none';
+        });
+
+        // Tampilkan hanya item pada halaman aktif saat ini
+        for (let i = startIndex; i < endIndex; i++) {
+            if (matchedCafeWrappers[i]) {
+                matchedCafeWrappers[i].style.display = '';
+            }
+        }
+
+        const cafePaginationBar = document.getElementById('cafePaginationBar');
+        const cafePaginationInfo = document.getElementById('cafePaginationInfo');
+        const cafePaginationList = document.getElementById('cafePaginationList');
+
+        if (cafePaginationBar && cafePaginationInfo && cafePaginationList) {
+            if (totalItems > CAFES_PER_PAGE) {
+                cafePaginationBar.style.display = 'flex';
+                cafePaginationInfo.textContent = `Menampilkan ${totalItems > 0 ? startIndex + 1 : 0} - ${endIndex} dari ${totalItems} Menu Cafe`;
+
+                let html = '';
+                // Previous button
+                html += `<li class="page-item ${cafeCurrentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToCafePage(${cafeCurrentPage - 1})" aria-label="Previous">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>`;
+
+                for (let p = 1; p <= totalPages; p++) {
+                    if (p === 1 || p === totalPages || (p >= cafeCurrentPage - 1 && p <= cafeCurrentPage + 1)) {
+                        html += `<li class="page-item ${p === cafeCurrentPage ? 'active' : ''}">
+                            <a class="page-link" href="javascript:void(0)" onclick="goToCafePage(${p})">${p}</a>
+                        </li>`;
+                    } else if (p === cafeCurrentPage - 2 || p === cafeCurrentPage + 2) {
+                        html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    }
+                }
+
+                // Next button
+                html += `<li class="page-item ${cafeCurrentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="javascript:void(0)" onclick="goToCafePage(${cafeCurrentPage + 1})" aria-label="Next">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>`;
+
+                cafePaginationList.innerHTML = html;
+            } else {
+                cafePaginationBar.style.display = 'none';
+            }
+        }
+    }
+
+    window.goToCafePage = function(page) {
+        cafeCurrentPage = page;
+        renderCafePagination();
+        const cafeSection = document.getElementById('cafeGrid');
+        if (cafeSection) {
+            cafeSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    };
+
+    function applyCafeFilters(resetPage = true) {
+        if (resetPage) {
+            cafeCurrentPage = 1;
+        }
+        const q = searchCafeInput ? searchCafeInput.value.toLowerCase().trim() : '';
+        const activeBtn = document.querySelector('.btn-cafe-cat.active');
+        const cat = activeBtn ? (activeBtn.getAttribute('data-category') || 'all') : 'all';
+
+        matchedCafeWrappers = [];
+        document.querySelectorAll('.cafe-item-wrapper').forEach(item => {
+            const name = (item.getAttribute('data-name') || '').toLowerCase();
+            const itemCat = (item.getAttribute('data-category') || '').toLowerCase();
+
+            const matchQuery = !q || name.includes(q);
+            const matchCategory = (cat === 'all') || itemCat.includes(cat.toLowerCase());
+
+            if (matchQuery && matchCategory) {
+                matchedCafeWrappers.push(item);
+            }
+        });
+
+        renderCafePagination();
+    }
+
     if (searchCafeInput) {
         searchCafeInput.addEventListener('input', function () {
-            const q = this.value.toLowerCase().trim();
-            document.querySelectorAll('.cafe-item-wrapper').forEach(item => {
-                const name = item.getAttribute('data-name') || '';
-                item.style.display = name.includes(q) ? '' : 'none';
-            });
+            applyCafeFilters(true);
         });
     }
 
@@ -2103,16 +2319,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.btn-cafe-cat').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-
-            const cat = this.getAttribute('data-category');
-            document.querySelectorAll('.cafe-item-wrapper').forEach(item => {
-                if (cat === 'all') {
-                    item.style.display = '';
-                } else {
-                    const itemCat = item.getAttribute('data-category') || '';
-                    item.style.display = itemCat.toLowerCase().includes(cat.toLowerCase()) ? '' : 'none';
-                }
-            });
+            applyCafeFilters(true);
         });
     });
 
@@ -3274,6 +3481,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (window.pesananCafeContext) {
         renderPesananCafeCart();
     }
+
+    // Inisialisasi awal pagination & filter film dan menu cafe
+    applyMovieFilters(true);
+    applyCafeFilters(true);
 
 });
 </script>

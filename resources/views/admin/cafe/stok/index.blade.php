@@ -221,6 +221,7 @@
                                 <td>
                                     @php
                                         $kategoriName = $item->nama_kategori ?? 'Umum';
+                                        $catIcon = \App\Models\MenuCafe::getIconForCategory($kategoriName);
                                         $badgeColor = match(strtolower($kategoriName)) {
                                             'makanan' => 'bg-warning-subtle text-warning border-warning',
                                             'minuman' => 'bg-info-subtle text-info border-info',
@@ -229,7 +230,7 @@
                                         };
                                     @endphp
                                     <span class="badge {{ $badgeColor }} border px-2 py-1 rounded-2">
-                                        <i class="bi bi-tag me-1"></i>{{ $kategoriName }}
+                                        <i class="{{ $catIcon }} me-1"></i>{{ $kategoriName }}
                                     </span>
                                 </td>
                                 <td>

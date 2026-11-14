@@ -20,4 +20,14 @@ class Barang extends Model
     {
         return $this->belongsTo(MenuCafe::class, 'menu_cafe_id');
     }
+
+    public function getIconAttribute(): string
+    {
+        return MenuCafe::getIconForCategory($this->menuCafe?->nama);
+    }
+
+    public function getBadgeColorAttribute(): string
+    {
+        return MenuCafe::getBadgeColorForCategory($this->menuCafe?->nama);
+    }
 }

@@ -507,6 +507,16 @@
                         </tbody>
                     </table>
                 </div>
+                @if($shiftHandovers->hasPages())
+                    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="small text-muted">
+                            Menampilkan <strong>{{ $shiftHandovers->firstItem() }}</strong> - <strong>{{ $shiftHandovers->lastItem() }}</strong> dari <strong>{{ $shiftHandovers->total() }}</strong> riwayat sesi
+                        </div>
+                        <div>
+                            {{ $shiftHandovers->links() }}
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

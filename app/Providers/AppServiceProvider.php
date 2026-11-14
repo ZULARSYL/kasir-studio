@@ -19,6 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Gunakan Bootstrap 5 untuk seluruh pagination Laravel
+        \Illuminate\Pagination\Paginator::useBootstrapFive();
+
         // Pengaturan Timezone Jakarta (WIB / UTC+7)
         config(['app.timezone' => 'Asia/Jakarta']);
         date_default_timezone_set('Asia/Jakarta');

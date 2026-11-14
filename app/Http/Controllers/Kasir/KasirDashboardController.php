@@ -147,7 +147,8 @@ class KasirDashboardController extends Controller
             ->whereDate('waktu_transaksi', $today)
             ->when($activeCabangId, fn($q) => $q->where('toko_cabang_id', $activeCabangId))
             ->latest('waktu_transaksi')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         // Response JSON jika diminta melalui AJAX (untuk live countdown & update status)
         if (($request->ajax() || $request->wantsJson()) && $request->get('mode') === 'rooms_status') {

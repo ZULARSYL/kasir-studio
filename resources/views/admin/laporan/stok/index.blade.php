@@ -226,8 +226,13 @@
                                 <div class="fw-bold text-heading">{{ $item->nama_barang }}</div>
                             </td>
                             <td>
-                                <span class="badge bg-light text-dark border px-2.5 py-1">
-                                    {{ $item->nama_kategori ?? 'Umum' }}
+                                @php
+                                    $kategoriName = $item->nama_kategori ?? 'Umum';
+                                    $catIcon = \App\Models\MenuCafe::getIconForCategory($kategoriName);
+                                    $catColor = \App\Models\MenuCafe::getBadgeColorForCategory($kategoriName);
+                                @endphp
+                                <span class="badge bg-{{ $catColor }}-subtle text-{{ $catColor }} border border-{{ $catColor }}-subtle px-2.5 py-1">
+                                    <i class="{{ $catIcon }} me-1"></i>{{ $kategoriName }}
                                 </span>
                             </td>
                             <td>

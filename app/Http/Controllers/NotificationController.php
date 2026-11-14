@@ -45,9 +45,22 @@ class NotificationController extends Controller
         // Kategori yang ada untuk tab filter
         $categories = collect($notificationsData['items'])->pluck('category')->unique()->values();
 
+        $page = (int) $request->input('page', 1);
+        $perPage = 10;
+        $paginatedItems = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items->forPage($page, $perPage)->values(),
+            $items->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
         return view('notifikasi.index', [
             'user' => $user,
-            'items' => $items,
+            'items' => $paginatedItems,
             'unreadCount' => $notificationsData['unread_count'],
             'totalCount' => $notificationsData['total_count'],
             'categories' => $categories,
